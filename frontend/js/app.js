@@ -39,98 +39,134 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (!soundManager.isMuted) soundManager.playSuccessChime();
     });
 
-    // 3b. LoomTrack Enterprise Role Authentication Modal
-    const rolePortalBtn = document.getElementById("rolePortalBtn");
-    const roleAuthModal = document.getElementById("roleAuthModal");
-    const closeRoleModalBtn = document.getElementById("closeRoleModalBtn");
-    const roleTabs = document.querySelectorAll("#roleTabs button");
-    const roleBadgeText = document.getElementById("roleBadgeText");
-    const roleGreeting = document.getElementById("roleGreeting");
-    const roleUsernameInput = document.getElementById("roleUsernameInput");
-    const rolePasswordInput = document.getElementById("rolePasswordInput");
-    const roleCredentialsDemo = document.getElementById("roleCredentialsDemo");
-    const roleAuthForm = document.getElementById("roleAuthForm");
+    // 3b. LoomTrack Enterprise Role Authentication & Portal Controller
+    const loomtrackLoginPortal = document.getElementById("loomtrackLoginPortal");
+    const loomtrackAppShell = document.getElementById("loomtrackAppShell");
+    const sidebarRoleBtn = document.getElementById("sidebarRoleBtn");
+    const topbarUserAvatar = document.getElementById("topbarUserAvatar");
+    const topbarCrumbScene = document.getElementById("topbarCrumbScene");
+
+    const portalRoleButtons = document.querySelectorAll("#portalRoleSwitch button");
+    const portalRoleBadge = document.getElementById("portalRoleBadge");
+    const portalGreeting = document.getElementById("portalGreeting");
+    const portalUsernameInput = document.getElementById("portalUsernameInput");
+    const portalPasswordInput = document.getElementById("portalPasswordInput");
+    const portalSubmitBtn = document.getElementById("portalSubmitBtn");
+    const portalDemoHint = document.getElementById("portalDemoHint");
+    const portalLoginForm = document.getElementById("portalLoginForm");
 
     const roleConfigs = {
         owner: {
-            badge: "OWNER ACCESS",
-            badgeClass: "status-idle",
+            badge: "Owner access",
+            initials: "AR",
             greeting: "Good morning, Arun.",
             user: "owner",
             pass: "owner123",
-            targetScene: "scene-floor"
+            targetScene: "scene-floor",
+            btnText: "Enter Owner view ➔"
         },
         admin: {
-            badge: "ADMINISTRATOR",
-            badgeClass: "status-running",
+            badge: "Administrator",
+            initials: "AD",
             greeting: "Welcome, Mill Operations Admin.",
             user: "admin",
             pass: "admin123",
-            targetScene: "scene-gate"
+            targetScene: "scene-gate",
+            btnText: "Enter Admin view ➔"
         },
         employee: {
-            badge: "FLOOR OPERATOR",
-            badgeClass: "status-running",
+            badge: "Floor operator",
+            initials: "OP",
             greeting: "Shift B Active: Operator Terminal.",
             user: "worker",
             pass: "worker123",
-            targetScene: "scene-qc"
+            targetScene: "scene-qc",
+            btnText: "Enter Operator view ➔"
         },
         customer: {
-            badge: "BUYER PORTAL",
-            badgeClass: "status-maint",
+            badge: "Buyer portal",
+            initials: "BY",
             greeting: "Zara / Marks & Spencer Portal.",
             user: "buyer",
             pass: "buyer123",
-            targetScene: "scene-customer"
+            targetScene: "scene-customer",
+            btnText: "Enter Buyer view ➔"
         }
     };
 
     let selectedRole = "owner";
 
-    if (rolePortalBtn && roleAuthModal) {
-        rolePortalBtn.addEventListener("click", () => {
+    // Switch Role / Logout button on sidebar
+    if (sidebarRoleBtn && loomtrackLoginPortal) {
+        sidebarRoleBtn.addEventListener("click", () => {
             soundManager.playClick();
-            roleAuthModal.style.display = "flex";
+            loomtrackLoginPortal.style.display = "flex";
         });
+    }
 
-        closeRoleModalBtn.addEventListener("click", () => {
+    if (topbarUserAvatar && loomtrackLoginPortal) {
+        topbarUserAvatar.addEventListener("click", () => {
             soundManager.playClick();
-            roleAuthModal.style.display = "none";
+            loomtrackLoginPortal.style.display = "flex";
         });
+    }
 
-        roleTabs.forEach(tab => {
-            tab.addEventListener("click", () => {
+    // Role switcher tabs in LoomTrack portal
+    if (portalRoleButtons) {
+        portalRoleButtons.forEach(btn => {
+            btn.addEventListener("click", () => {
                 soundManager.playClick();
-                roleTabs.forEach(t => {
-                    t.style.borderBottom = "none";
-                    t.classList.remove("active");
-                });
-                tab.classList.add("active");
-                tab.style.borderBottom = "2px solid var(--status-idle)";
-                
-                selectedRole = tab.dataset.role;
+                portalRoleButtons.forEach(b => b.classList.remove("active"));
+                btn.classList.add("active");
+
+                selectedRole = btn.dataset.role;
                 const cfg = roleConfigs[selectedRole];
-                roleBadgeText.textContent = cfg.badge;
-                roleGreeting.textContent = cfg.greeting;
-                roleUsernameInput.value = cfg.user;
-                rolePasswordInput.value = cfg.pass;
-                roleCredentialsDemo.textContent = `${cfg.user} / ${cfg.pass}`;
+                if (portalRoleBadge) portalRoleBadge.textContent = cfg.badge;
+                if (portalGreeting) portalGreeting.textContent = cfg.greeting;
+                if (portalUsernameInput) portalUsernameInput.value = cfg.user;
+                if (portalPasswordInput) portalPasswordInput.value = cfg.pass;
+                if (portalSubmitBtn) portalSubmitBtn.textContent = cfg.btnText;
+                if (portalDemoHint) portalDemoHint.innerHTML = `${cfg.user} <i>/</i> ${cfg.pass}`;
             });
         });
+    }
 
-        roleAuthForm.addEventListener("submit", (e) => {
+    // Login submit
+    if (portalLoginForm) {
+        portalLoginForm.addEventListener("submit", (e) => {
             e.preventDefault();
             soundManager.playSuccessChime();
-            roleAuthModal.style.display = "none";
-            rolePortalBtn.textContent = `👤 ${selectedRole.toUpperCase()}`;
+            if (loomtrackLoginPortal) loomtrackLoginPortal.style.display = "none";
+            if (loomtrackAppShell) loomtrackAppShell.style.display = "flex";
 
-            // Navigate to the role's primary operational scene
             const cfg = roleConfigs[selectedRole];
+            if (topbarUserAvatar) topbarUserAvatar.textContent = cfg.initials;
+
+            // Route to target scene
             const targetTab = document.querySelector(`.nav-tab[data-scene='${cfg.targetScene}']`);
             if (targetTab) targetTab.click();
         });
     }
+
+    // Update breadcrumb when scenes switch
+    const sceneTitles = {
+        "scene-floor": "FLOOR & MACHINES",
+        "scene-gate": "RAW YARN & STOCK",
+        "scene-qc": "QUALITY ASTM D5430",
+        "scene-dispatch": "TRUCK DISPATCH",
+        "scene-customer": "BUYER PORTAL",
+        "scene-financial": "FINANCE & COSTING"
+    };
+
+    navTabs.forEach(tab => {
+        tab.addEventListener("click", () => {
+            const sc = tab.dataset.scene;
+            if (topbarCrumbScene && sceneTitles[sc]) {
+                topbarCrumbScene.textContent = sceneTitles[sc];
+            }
+        });
+    });
+
 
     // 3c. Industrial Item Passport Controller & Dual-Unit Calculator
     const itemPassportModal = document.getElementById("itemPassportModal");

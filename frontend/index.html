@@ -45,96 +45,203 @@
 </head>
 <body class="bg-slate-100 text-slate-900 font-sans antialiased">
 
-  <!-- TOP STATUS & SYSTEM HUD -->
-  <header class="mill-header">
-    <div class="brand-section">
-      <div class="brand-logo-icon">
-        <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+  <!-- ===================================================================
+       1. LOOMTRACK 3-COLUMN FABRIC PORTAL (EMERGENT SH DESIGN)
+       =================================================================== -->
+  <div id="loomtrackLoginPortal" class="login-page login-owner" style="display: none;">
+    <!-- 3-Column Fabric Imagery Background -->
+    <div class="login-bg" aria-hidden="true">
+      <div class="login-bg-col col-0">
+        <img alt="Weaving Shed Looms" src="https://images.unsplash.com/photo-1598033129183-c4f50c736f10?auto=format&fit=crop&w=1200&q=80">
       </div>
-      <div class="brand-text">
-        <h1>EVEREST TEXTILE MILLS</h1>
-        <p>Enterprise Technical Manual & System Architecture (ETMS v2.0)</p>
+      <div class="login-bg-col col-1">
+        <img alt="Yarn Spools Ring Frames" src="https://images.unsplash.com/photo-1544441893-675973e31985?auto=format&fit=crop&w=1200&q=80">
       </div>
+      <div class="login-bg-col col-2">
+        <img alt="Dyeing and Material Board" src="https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=1200&q=80">
+      </div>
+      <div class="login-bg-veil"></div>
+      <div class="login-bg-divider left"></div>
+      <div class="login-bg-divider right"></div>
     </div>
 
-    <div class="hud-pills">
-      <div class="hud-pill">
-        <span class="dot-pulse" id="backendPulse"></span>
-        <span>EDGE MESH: <strong id="edgeStatusText">ONLINE</strong></span>
+    <!-- Header bar -->
+    <header class="login-top">
+      <div class="brand-mark">
+        <span>LM</span>
+        <div>
+          <strong>LOOM<span>TRACK</span></strong>
+          <small style="color: #74859a; font: 9px 'JetBrains Mono'; letter-spacing: .1em; display: block;">mill operations / live</small>
+        </div>
       </div>
-      <div class="hud-pill">
-        <span>LOOM PICKS/SEC: <strong id="globalPickRate">96 PPS</strong></span>
+      <div class="login-top-right">
+        <span class="trim-dot"></span> PLANT 01 · SHIFT B
       </div>
-      <div class="hud-pill">
-        <span>RUNNING LOOMS: <strong id="activeLoomsCount">6 / 8</strong></span>
-      </div>
-      <button class="btn btn-ghost" id="soundToggleBtn" style="padding: 0.35rem 0.75rem; font-size: 0.75rem;">
-        🔊 AUDIO: ON
-      </button>
-      <button class="btn btn-primary" id="rolePortalBtn" style="padding: 0.35rem 0.85rem; font-size: 0.75rem;">
-        👤 SWITCH ROLE
-      </button>
-    </div>
-  </header>
+    </header>
 
-  <!-- NAVIGATION BAR (THE 6 OPERATIONAL SCENES) -->
-  <nav class="mill-nav">
-    <button class="nav-tab active" data-scene="scene-floor">
-      <span>🏭</span> 1. Production Floor HUD
-    </button>
-    <button class="nav-tab" data-scene="scene-gate">
-      <span>⚖️</span> 2. Gate Inward & Raw Stock
-      <span class="nav-badge" id="stockAlertBadge" style="display:none;">ALERT</span>
-    </button>
-    <button class="nav-tab" data-scene="scene-qc">
-      <span>🔍</span> 3. Quality Control (ASTM D5430)
-    </button>
-    <button class="nav-tab" data-scene="scene-dispatch">
-      <span>🚚</span> 4. Truck Dispatch Terminal
-    </button>
-    <button class="nav-tab" data-scene="scene-customer">
-      <span>📱</span> 5. Customer Tracking Portal
-      <span class="nav-badge new">GAP 4 FIX</span>
-    </button>
-    <button class="nav-tab" data-scene="scene-financial">
-      <span>📊</span> 6. Financial Closing & ABC Costing
-    </button>
-  </nav>
+    <!-- Centered headline -->
+    <section class="login-headline">
+      <div class="eyebrow">TEXTILE OPERATING SYSTEM</div>
+      <h1>From first yarn <em>to final roll.</em></h1>
+      <p>One connected view of every order, machine, material and person on the floor.</p>
+    </section>
 
-  <!-- LIVE 2026 FACTORY TIME-MACHINE & ENGINE CONTROL STRIP -->
-  <div style="background: #ffffff; border-bottom: 1px solid #e2e8f0; padding: 0.6rem 2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
-    <div style="display: flex; align-items: center; gap: 1.25rem;">
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <span class="dot-pulse" style="width: 10px; height: 10px;"></span>
-        <strong style="font-family: var(--font-display); font-size: 0.85rem; color: #0f172a; letter-spacing: 0.04em;">FACTORY SIMULATION ENGINE</strong>
-      </div>
-      <div style="display: flex; align-items: center; gap: 6px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 4px 10px; border-radius: 9999px;">
-        <span style="font-size: 0.8rem;">🕒</span>
-        <span id="simClockTime" style="font-family: var(--font-mono); font-weight: 700; font-size: 0.82rem; color: #0f172a;">08:14:22</span>
-        <span style="font-size: 0.68rem; color: #64748b; font-weight: 600;" id="simShiftBadge">SHIFT A (MORNING)</span>
-      </div>
-    </div>
-
-    <!-- Simulation Speed Dials & Event Injections -->
-    <div style="display: flex; align-items: center; gap: 8px;">
-      <div style="display: flex; background: #f1f5f9; padding: 3px; border-radius: 9999px; border: 1px solid #e2e8f0;" id="simSpeedDials">
-        <button class="btn-ghost active" data-speed="1" style="padding: 3px 10px; font-size: 0.72rem; border-radius: 9999px; font-weight: 700; background: #0f172a; color: #fff;">1x Live</button>
-        <button class="btn-ghost" data-speed="10" style="padding: 3px 10px; font-size: 0.72rem; border-radius: 9999px; font-weight: 700;">10x Shift</button>
-        <button class="btn-ghost" data-speed="60" style="padding: 3px 10px; font-size: 0.72rem; border-radius: 9999px; font-weight: 700;">60x Turbo</button>
+    <!-- Centered login card -->
+    <section class="login-card" data-testid="login-card">
+      <div class="role-switch" id="portalRoleSwitch">
+        <button type="button" class="active" data-role="owner">Owner</button>
+        <button type="button" data-role="admin">Admin</button>
+        <button type="button" data-role="employee">Employee</button>
+        <button type="button" data-role="customer">Customer</button>
       </div>
 
-      <button id="toggleSimPlayBtn" class="btn btn-ghost" style="padding: 4px 10px; font-size: 0.75rem; border-radius: 9999px;">
-        ⏸ Pause
-      </button>
+      <div class="login-copy">
+        <span class="pill-amber" id="portalRoleBadge">Owner access</span>
+        <h2 id="portalGreeting">Good morning, Arun.</h2>
+      </div>
 
-      <button id="injectWeftBreakBtn" class="btn btn-ghost" style="padding: 4px 10px; font-size: 0.72rem; border-radius: 9999px; color: #e11d48; border-color: rgba(225, 29, 72, 0.3);">
-        ⚠️ Inject Weft Break (Loom 01)
-      </button>
-    </div>
+      <form class="login-form" id="portalLoginForm">
+        <label>Username
+          <input id="portalUsernameInput" placeholder="owner" autocomplete="off" value="owner">
+        </label>
+        <label>Password
+          <input id="portalPasswordInput" placeholder="owner123" type="password" autocomplete="off" value="owner123">
+        </label>
+        <button type="submit" class="primary-btn wide" id="portalSubmitBtn">
+          Enter Owner view ➔
+        </button>
+      </form>
+
+      <div class="demo-hint">
+        <span>DEMO</span>
+        <strong id="portalDemoHint">owner <i>/</i> owner123</strong>
+      </div>
+    </section>
+
+    <!-- Bottom meta footer -->
+    <footer class="login-foot">
+      <span>EST. 1978 · EVEREST MILLS</span>
+      <span>YARN → MACHINE → QUALITY → DISPATCH</span>
+      <span>v2.1 · LIVE</span>
+    </footer>
   </div>
 
-  <!-- MAIN SCENE CONTAINER -->
-  <main class="main-viewport">
+  <!-- ===================================================================
+       2. LOOMTRACK INDUSTRIAL APP SHELL (SIDEBAR + MAIN SHELL)
+       =================================================================== -->
+  <div class="app-shell" id="loomtrackAppShell">
+    
+    <!-- DARK INDUSTRIAL SIDEBAR -->
+    <aside class="sidebar">
+      <div class="side-brand">
+        <span>LM</span>
+        <div>
+          <strong>LOOM<span>TRACK</span></strong>
+        </div>
+      </div>
+
+      <div class="workspace-label">Mill Workspace</div>
+      <nav id="sidebarNav">
+        <button class="nav-tab active" data-scene="scene-floor">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          Floor & Machines
+        </button>
+        <button class="nav-tab" data-scene="scene-gate">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m2 7 10-5 10 5-10 5z"/><path d="M12 22V12"/></svg>
+          Raw Yarn & Stock
+          <span class="nav-badge" id="stockAlertBadge" style="display:none; margin-left:auto;">ALERT</span>
+        </button>
+        <button class="nav-tab" data-scene="scene-qc">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          Quality ASTM D5430
+        </button>
+        <button class="nav-tab" data-scene="scene-dispatch">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+          Truck Dispatch
+        </button>
+        <button class="nav-tab" data-scene="scene-customer">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><line x1="3" x2="21" y1="6" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+          Buyer Portal
+        </button>
+        <button class="nav-tab" data-scene="scene-financial">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          Finance & Costing
+        </button>
+      </nav>
+
+      <div class="side-footer">
+        <div class="live-dot">
+          <span></span> Mill Telemetry Live
+        </div>
+        <button class="logout-btn" id="sidebarRoleBtn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+          Switch Role / Logout
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN SHELL WITH TOPBAR -->
+    <div class="main-shell">
+      
+      <!-- TOP STATUS & SYSTEM HUD -->
+      <header class="topbar">
+        <div class="crumb">
+          LOOMTRACK <span>/</span> <span id="topbarCrumbScene" style="color: #0f172a; font-weight: 700; padding: 0;">FLOOR & MACHINES</span>
+        </div>
+
+        <div class="top-actions">
+          <div class="live-chip">
+            <span class="pulse-dot"></span>
+            FASTAPI RUNNING · <strong id="globalPickRate">96 PPS</strong>
+          </div>
+          <div class="hud-pill" style="border: 1px solid var(--line); padding: 4px 10px; border-radius: 9999px; font-size: 0.72rem; display: flex; align-items: center; gap: 6px;">
+            <span style="font-size: 0.75rem;">⚡</span>
+            <span>RUNNING: <strong id="activeLoomsCount">6 / 8</strong></span>
+          </div>
+          <button class="icon-btn" id="soundToggleBtn" title="Toggle Factory Audio Feedback">
+            🔊
+          </button>
+          <div class="avatar" id="topbarUserAvatar" title="Active Role">
+            AR
+          </div>
+        </div>
+      </header>
+
+      <!-- LIVE 2026 FACTORY TIME-MACHINE & ENGINE CONTROL STRIP -->
+      <div style="background: #ffffff; border-bottom: 1px solid #e2e8f0; padding: 0.6rem 2.4rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+        <div style="display: flex; align-items: center; gap: 1.25rem;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="dot-pulse" style="width: 10px; height: 10px;"></span>
+            <strong style="font-family: var(--font-display); font-size: 0.85rem; color: #0f172a; letter-spacing: 0.04em;">FACTORY SIMULATION ENGINE</strong>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 4px 10px; border-radius: 9999px;">
+            <span style="font-size: 0.8rem;">🕒</span>
+            <span id="simClockTime" style="font-family: var(--font-mono); font-weight: 700; font-size: 0.82rem; color: #0f172a;">08:14:22</span>
+            <span style="font-size: 0.68rem; color: #64748b; font-weight: 600;" id="simShiftBadge">SHIFT A (MORNING)</span>
+          </div>
+        </div>
+
+        <!-- Simulation Speed Dials & Event Injections -->
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="display: flex; background: #f1f5f9; padding: 3px; border-radius: 9999px; border: 1px solid #e2e8f0;" id="simSpeedDials">
+            <button class="btn-ghost active" data-speed="1" style="padding: 3px 10px; font-size: 0.72rem; border-radius: 9999px; font-weight: 700; background: #0f172a; color: #fff;">1x Live</button>
+            <button class="btn-ghost" data-speed="10" style="padding: 3px 10px; font-size: 0.72rem; border-radius: 9999px; font-weight: 700;">10x Shift</button>
+            <button class="btn-ghost" data-speed="60" style="padding: 3px 10px; font-size: 0.72rem; border-radius: 9999px; font-weight: 700;">60x Turbo</button>
+          </div>
+
+          <button id="toggleSimPlayBtn" class="btn btn-ghost" style="padding: 4px 10px; font-size: 0.75rem; border-radius: 9999px;">
+            ⏸ Pause
+          </button>
+
+          <button id="injectWeftBreakBtn" class="btn btn-ghost" style="padding: 4px 10px; font-size: 0.72rem; border-radius: 9999px; color: #e11d48; border-color: rgba(225, 29, 72, 0.3);">
+            ⚠️ Inject Weft Break (Loom 01)
+          </button>
+        </div>
+      </div>
+
+      <!-- MAIN CONTENT VIEWPORT -->
+      <main class="main-viewport" style="padding: 2rem 2.4rem; max-width: 1440px;">
+
 
     <!-- ===================================================================
          SCENE 1: PRODUCTION FLOOR HUD & LOOM TELEMETRY
@@ -791,9 +898,12 @@
       </div>
     </section>
 
-  </main>
+      </main> <!-- /main-viewport -->
+    </div> <!-- /main-shell -->
+  </div> <!-- /app-shell -->
 
   <!-- CRITICAL DOUBLE-DISPATCH ALARM MODAL -->
+
   <div class="alarm-overlay" id="doubleDispatchAlarmModal">
     <div class="alarm-card">
       <div class="alarm-icon">
