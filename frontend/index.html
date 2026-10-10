@@ -35,6 +35,9 @@
       <button class="btn btn-ghost" id="soundToggleBtn" style="padding: 0.35rem 0.75rem; font-size: 0.75rem;">
         🔊 AUDIO: ON
       </button>
+      <button class="btn btn-primary" id="rolePortalBtn" style="padding: 0.35rem 0.85rem; font-size: 0.75rem;">
+        👤 SWITCH ROLE
+      </button>
     </div>
   </header>
 
@@ -625,6 +628,51 @@
       <button class="btn btn-danger" style="width: 100%; font-size: 1rem; padding: 0.85rem;" id="closeAlarmModalBtn">
         Acknowledge & Clear Security Alarm
       </button>
+    </div>
+  </div>
+
+  <!-- LOOMTRACK ENTERPRISE ROLE AUTHENTICATION MODAL -->
+  <div class="alarm-overlay" id="roleAuthModal" style="display: none;">
+    <div class="glass-panel" style="max-width: 440px; width: 100%; padding: 2rem; background: #0b1322ee; border: 1px solid rgba(245, 158, 11, 0.4); box-shadow: 0 25px 60px rgba(0,0,0,0.8);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="background: var(--status-idle); color: #000; font-weight: 800; font-size: 0.75rem; padding: 3px 6px; border-radius: 4px;">LM</span>
+          <strong style="font-family: var(--font-display); font-size: 1.1rem; color: #fff;">LOOM<span style="color: var(--status-idle);">TRACK</span></strong>
+        </div>
+        <button id="closeRoleModalBtn" style="background: none; border: 0; color: var(--text-muted); font-size: 1.25rem; cursor: pointer;">✕</button>
+      </div>
+
+      <div style="display: flex; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 1.25rem; gap: 8px;" id="roleTabs">
+        <button class="btn btn-ghost active" data-role="owner" style="font-size: 0.75rem; padding: 0.4rem 0.75rem; border-bottom: 2px solid var(--status-idle); border-radius: 0;">Owner</button>
+        <button class="btn btn-ghost" data-role="admin" style="font-size: 0.75rem; padding: 0.4rem 0.75rem; border-radius: 0;">Admin</button>
+        <button class="btn btn-ghost" data-role="employee" style="font-size: 0.75rem; padding: 0.4rem 0.75rem; border-radius: 0;">Employee</button>
+        <button class="btn btn-ghost" data-role="customer" style="font-size: 0.75rem; padding: 0.4rem 0.75rem; border-radius: 0;">Customer</button>
+      </div>
+
+      <div style="margin-bottom: 1rem;">
+        <span class="status-pill status-idle" id="roleBadgeText" style="margin-bottom: 0.5rem; display: inline-block;">OWNER ACCESS</span>
+        <h3 id="roleGreeting" style="font-family: var(--font-display); font-size: 1.35rem; color: #fff; margin-bottom: 0.25rem;">Good morning, Arun.</h3>
+        <p style="font-size: 0.8rem; color: var(--text-muted);">Unified live operational control across yarn, looms, quality & dispatch.</p>
+      </div>
+
+      <form id="roleAuthForm">
+        <div style="margin-bottom: 0.75rem;">
+          <label class="form-label" style="font-size: 0.7rem;">Username</label>
+          <input type="text" class="input-field" id="roleUsernameInput" value="owner" style="width: 100%; margin-top: 4px;">
+        </div>
+        <div style="margin-bottom: 1rem;">
+          <label class="form-label" style="font-size: 0.7rem;">Password</label>
+          <input type="password" class="input-field" id="rolePasswordInput" value="owner123" style="width: 100%; margin-top: 4px;">
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.75rem; font-weight: 700;">
+          Launch Role Workspace →
+        </button>
+      </form>
+
+      <div style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-dim); font-family: var(--font-mono);">
+        <span>DEMO PRESET</span>
+        <span id="roleCredentialsDemo" style="color: #cbd5e1;">owner / owner123</span>
+      </div>
     </div>
   </div>
 

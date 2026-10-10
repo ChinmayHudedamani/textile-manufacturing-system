@@ -39,6 +39,99 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (!soundManager.isMuted) soundManager.playSuccessChime();
     });
 
+    // 3b. LoomTrack Enterprise Role Authentication Modal
+    const rolePortalBtn = document.getElementById("rolePortalBtn");
+    const roleAuthModal = document.getElementById("roleAuthModal");
+    const closeRoleModalBtn = document.getElementById("closeRoleModalBtn");
+    const roleTabs = document.querySelectorAll("#roleTabs button");
+    const roleBadgeText = document.getElementById("roleBadgeText");
+    const roleGreeting = document.getElementById("roleGreeting");
+    const roleUsernameInput = document.getElementById("roleUsernameInput");
+    const rolePasswordInput = document.getElementById("rolePasswordInput");
+    const roleCredentialsDemo = document.getElementById("roleCredentialsDemo");
+    const roleAuthForm = document.getElementById("roleAuthForm");
+
+    const roleConfigs = {
+        owner: {
+            badge: "OWNER ACCESS",
+            badgeClass: "status-idle",
+            greeting: "Good morning, Arun.",
+            user: "owner",
+            pass: "owner123",
+            targetScene: "scene-floor"
+        },
+        admin: {
+            badge: "ADMINISTRATOR",
+            badgeClass: "status-running",
+            greeting: "Welcome, Mill Operations Admin.",
+            user: "admin",
+            pass: "admin123",
+            targetScene: "scene-gate"
+        },
+        employee: {
+            badge: "FLOOR OPERATOR",
+            badgeClass: "status-running",
+            greeting: "Shift B Active: Operator Terminal.",
+            user: "worker",
+            pass: "worker123",
+            targetScene: "scene-qc"
+        },
+        customer: {
+            badge: "BUYER PORTAL",
+            badgeClass: "status-maint",
+            greeting: "Zara / Marks & Spencer Portal.",
+            user: "buyer",
+            pass: "buyer123",
+            targetScene: "scene-customer"
+        }
+    };
+
+    let selectedRole = "owner";
+
+    if (rolePortalBtn && roleAuthModal) {
+        rolePortalBtn.addEventListener("click", () => {
+            soundManager.playClick();
+            roleAuthModal.style.display = "flex";
+        });
+
+        closeRoleModalBtn.addEventListener("click", () => {
+            soundManager.playClick();
+            roleAuthModal.style.display = "none";
+        });
+
+        roleTabs.forEach(tab => {
+            tab.addEventListener("click", () => {
+                soundManager.playClick();
+                roleTabs.forEach(t => {
+                    t.style.borderBottom = "none";
+                    t.classList.remove("active");
+                });
+                tab.classList.add("active");
+                tab.style.borderBottom = "2px solid var(--status-idle)";
+                
+                selectedRole = tab.dataset.role;
+                const cfg = roleConfigs[selectedRole];
+                roleBadgeText.textContent = cfg.badge;
+                roleGreeting.textContent = cfg.greeting;
+                roleUsernameInput.value = cfg.user;
+                rolePasswordInput.value = cfg.pass;
+                roleCredentialsDemo.textContent = `${cfg.user} / ${cfg.pass}`;
+            });
+        });
+
+        roleAuthForm.addEventListener("submit", (e) => {
+            e.preventDefault();
+            soundManager.playSuccessChime();
+            roleAuthModal.style.display = "none";
+            rolePortalBtn.textContent = `👤 ${selectedRole.toUpperCase()}`;
+
+            // Navigate to the role's primary operational scene
+            const cfg = roleConfigs[selectedRole];
+            const targetTab = document.querySelector(`.nav-tab[data-scene='${cfg.targetScene}']`);
+            if (targetTab) targetTab.click();
+        });
+    }
+
     // 4. Initial Render of All Modules
     renderFloorHUD();
     renderGateInward();
