@@ -584,6 +584,15 @@ body {
   50% { box-shadow: 0 0 15px rgba(239, 68, 68, 0.3); }
 }
 
+.machine-card.benchmark-daemon-loom {
+  border-left: 4px solid #FFCD11 !important;
+  box-shadow: 0 4px 14px rgba(255, 205, 17, 0.15);
+}
+
+.machine-card.benchmark-daemon-loom.running {
+  box-shadow: 0 0 0 1px rgba(255, 205, 17, 0.4), 0 4px 14px rgba(255, 205, 17, 0.12);
+}
+
 .machine-card.maintenance {
   border-top: 4px solid #8b5cf6;
   opacity: 0.85;

@@ -438,41 +438,104 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     // =================================================================
-    // SCENE 1: PRODUCTION FLOOR HUD
+    // SCENE 1: PRODUCTION FLOOR HUD & ACCORDIONS
     // =================================================================
+    window.floorAccordionState = {
+        spinning: true,
+        weaving: true,
+        dyeing: true
+    };
+
+    window.toggleFloorSection = (sectionKey) => {
+        soundManager.playClick();
+        window.floorAccordionState[sectionKey] = !window.floorAccordionState[sectionKey];
+        const body = document.getElementById(`body-${sectionKey}`);
+        const chevron = document.getElementById(`chevron-${sectionKey}`);
+        if (body && chevron) {
+            if (window.floorAccordionState[sectionKey]) {
+                body.style.display = "block";
+                chevron.textContent = "▼";
+            } else {
+                body.style.display = "none";
+                chevron.textContent = "▶";
+            }
+        }
+    };
+
     function renderFloorHUD() {
         const spinningCont = document.getElementById("spinningMachinesContainer");
         const weavingCont = document.getElementById("weavingMachinesContainer");
         const dyeingCont = document.getElementById("dyeingMachinesContainer");
 
-        spinningCont.innerHTML = "";
-        weavingCont.innerHTML = "";
-        dyeingCont.innerHTML = "";
+        if (spinningCont) spinningCont.innerHTML = "";
+        if (weavingCont) weavingCont.innerHTML = "";
+        if (dyeingCont) dyeingCont.innerHTML = "";
 
         let totalPicks = 0;
         let totalAmps = 0.0;
         let idleAlerts = 0;
+
+        let spinActive = 0, spinTotal = 0, spinAmps = 0;
+        let weaveActive = 0, weaveTotal = 0, weaveAmps = 0;
+        let dyeActive = 0, dyeTotal = 0, dyeAmps = 0;
 
         store.state.machines.forEach(m => {
             totalPicks += m.current_picks_cumulative;
             totalAmps += m.current_power_draw_amps;
             if (m.is_idle_alert) idleAlerts++;
 
+            const isRunning = m.current_status === "RUNNING";
+
+            if (m.stage === "SPINNING") {
+                spinTotal++;
+                if (isRunning) spinActive++;
+                spinAmps += m.current_power_draw_amps;
+            } else if (m.stage === "WEAVING") {
+                weaveTotal++;
+                if (isRunning) weaveActive++;
+                weaveAmps += m.current_power_draw_amps;
+            } else if (m.stage === "DYEING") {
+                dyeTotal++;
+                if (isRunning) dyeActive++;
+                dyeAmps += m.current_power_draw_amps;
+            }
+
             const card = createMachineCard(m);
-            if (m.stage === "SPINNING") spinningCont.appendChild(card);
-            else if (m.stage === "WEAVING") weavingCont.appendChild(card);
-            else if (m.stage === "DYEING") dyeingCont.appendChild(card);
+            if (m.stage === "SPINNING" && spinningCont) spinningCont.appendChild(card);
+            else if (m.stage === "WEAVING" && weavingCont) weavingCont.appendChild(card);
+            else if (m.stage === "DYEING" && dyeingCont) dyeingCont.appendChild(card);
         });
 
+        // Update Section Header Summaries and Badges
+        const spinSummary = document.getElementById("spinningSummaryText");
+        const spinPower = document.getElementById("spinningPowerBadge");
+        if (spinSummary) spinSummary.textContent = `${spinTotal} Frames Total · ${spinActive}/${spinTotal} Active · ${spinTotal - spinActive} Idle`;
+        if (spinPower) spinPower.textContent = `${spinAmps.toFixed(1)} A (RS-485)`;
+
+        const weaveSummary = document.getElementById("weavingSummaryText");
+        const weavePower = document.getElementById("weavingPowerBadge");
+        if (weaveSummary) weaveSummary.textContent = `${weaveTotal} Looms Total · ${weaveActive}/${weaveTotal} Active · Tsudakoma & Picanol Fleet`;
+        if (weavePower) weavePower.textContent = `${weaveAmps.toFixed(1)} A · 720 PPM`;
+
+        const dyeSummary = document.getElementById("dyeingSummaryText");
+        const dyePower = document.getElementById("dyeingPowerBadge");
+        if (dyeSummary) dyeSummary.textContent = `${dyeTotal} Vats Total · ${dyeActive}/${dyeTotal} Active · Thermal Liquor Controls`;
+        if (dyePower) dyePower.textContent = `${dyeAmps.toFixed(1)} A · 85.4°C AVG`;
+
+        // Top Metrics
         document.getElementById("totalPicksDisplay").textContent = totalPicks.toLocaleString();
         document.getElementById("totalPowerAmps").textContent = `${totalAmps.toFixed(1)} A`;
-        document.getElementById("idleAlertsCount").textContent = `${idleAlerts} Machine${idleAlerts === 1 ? '' : 's'}`;
+        
+        const idleElem = document.getElementById("idleAlertsCount");
+        if (idleElem) {
+            idleElem.textContent = `${idleAlerts} Machine${idleAlerts === 1 ? '' : 's'}`;
+            idleElem.style.color = idleAlerts > 0 ? '#d97706' : '#15803d';
+        }
 
-        // Dynamically modulate Solora Energy System Nodes
+        // Dynamically modulate Solora / CAT Power System Nodes
         const solarElem = document.getElementById("solarGenerationVal");
         const substationElem = document.getElementById("substationFlowVal");
         if (solarElem) {
-            // Solar modulated by time of day: peak at midday, lower in evening
             const hrs = (store.simSecondsOfDay / 3600);
             let solarFactor = Math.max(0, Math.sin(((hrs - 6) / 13) * Math.PI));
             const liveSolarKw = (42.8 * (0.85 + 0.3 * solarFactor) + (Math.sin(Date.now() / 4000) * 1.2)).toFixed(1);
@@ -482,10 +545,36 @@ document.addEventListener("DOMContentLoaded", async () => {
             substationElem.textContent = `${totalAmps.toFixed(1)} A`;
         }
 
+        // Update C++ Native Daemon Stream Display
+        updateCppDaemonDisplay();
+
         // Draw real-time sparkline waveforms for each machine
         store.state.machines.forEach(m => {
             drawMachineSparkline(m.machine_id, m.current_status);
         });
+    }
+
+    function updateCppDaemonDisplay() {
+        const payloadElem = document.getElementById("cppPayloadCode");
+        const timeElem = document.getElementById("cppPacketTimestamp");
+        const loom4 = store.state.machines.find(m => m.machine_id === "WEAVE-LOOM-04");
+        if (payloadElem && loom4) {
+            const packet = {
+                machine_id: loom4.machine_id,
+                state: loom4.current_status,
+                amps: loom4.current_power_draw_amps,
+                rpm: loom4.current_rpm || 0,
+                picks: loom4.current_picks_cumulative,
+                weft_tension_cn: loom4.warp_tension_cn || 182,
+                ipc: "MQTT_QOS_1",
+                seq: Math.floor(loom4.current_picks_cumulative / 12) % 256,
+                latency_us: Math.floor(38 + Math.random() * 8)
+            };
+            payloadElem.textContent = JSON.stringify(packet, null, 2);
+        }
+        if (timeElem) {
+            timeElem.textContent = `TIMESTAMP: ${new Date().toISOString().substring(11, 23)} UTC`;
+        }
     }
 
     function drawMachineSparkline(machineId, status) {
@@ -499,9 +588,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         const history = store.telemetryHistory[machineId] || [];
         if (history.length < 2) return;
 
-        // Base line
         ctx.beginPath();
-        ctx.strokeStyle = status === "RUNNING" ? "#0284c7" : "#cbd5e1";
+        ctx.strokeStyle = status === "RUNNING" ? "#FFCD11" : "#71717a";
         ctx.lineWidth = 1.75;
         ctx.lineJoin = "round";
 
@@ -520,116 +608,114 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
         ctx.stroke();
 
-        // Pulsing tip at end of waveform
         if (status === "RUNNING") {
             const lastVal = points[points.length - 1];
             const normY = (lastVal - minVal) / range;
             const lastY = h - (normY * (h - 6) + 3);
-            ctx.fillStyle = "#0284c7";
+            ctx.fillStyle = "#FFCD11";
             ctx.beginPath();
             ctx.arc(w - 2, lastY, 2.5, 0, Math.PI * 2);
             ctx.fill();
         }
     }
 
-
     function createMachineCard(m) {
         const div = document.createElement("div");
         const isIdleAlert = m.is_idle_alert;
         const statusClass = m.current_status.toLowerCase();
+        const isBenchmark = m.machine_id === "WEAVE-LOOM-04";
 
-        div.className = `machine-card ${statusClass} ${isIdleAlert ? 'idle-alert' : ''}`;
+        div.className = `machine-card ${statusClass} ${isIdleAlert ? 'idle-alert' : ''} ${isBenchmark ? 'benchmark-daemon-loom' : ''}`;
+        div.id = `card_${m.machine_id}`;
 
-        // Stage-Specific Industrial Textile Telemetry
         let specRows = "";
         if (m.stage === "WEAVING") {
             specRows = `
-                <div class="textile-subgrid">
-                    <div class="t-cell"><span class="t-lbl">TYPE</span><span class="t-val">${m.loom_type || 'Airjet'}</span></div>
-                    <div class="t-cell"><span class="t-lbl">REED</span><span class="t-val">${m.reed_width_cm || 190} cm</span></div>
-                    <div class="t-cell"><span class="t-lbl">WARP YARN</span><span class="t-val mono">${m.warp_count || '60s Ne'}</span></div>
-                    <div class="t-cell"><span class="t-lbl">WEFT YARN</span><span class="t-val mono">${m.weft_count || '60s Ne'}</span></div>
-                    <div class="t-cell"><span class="t-lbl">PICKS/CM</span><span class="t-val mono">${m.picks_per_cm || 28.5}</span></div>
-                    <div class="t-cell"><span class="t-lbl">WARP TENS</span><span class="t-val mono">${m.warp_tension_cn || 180} cN</span></div>
-                    <div class="t-cell"><span class="t-lbl">INSERTION</span><span class="t-val mono">${m.weft_insertion_m_min || 0} m/min</span></div>
-                    <div class="t-cell"><span class="t-lbl">STOPS (W/F)</span><span class="t-val mono">${m.warp_stops_shift ?? 0} / ${m.weft_stops_shift ?? 0}</span></div>
+                <div class="textile-subgrid" style="grid-template-columns: repeat(2, 1fr); gap: 6px; margin-top: 8px; font-size: 0.72rem; background: #fafafa; border: 1px solid #e4e4e7; border-radius: 4px; padding: 6px 8px;">
+                    <div class="t-cell"><span class="t-lbl" style="color: #71717a; font-size: 0.65rem; display:block;">ORDER REF</span><strong class="t-val mono" style="color: #111111;">${m.order_ref || m.assigned_order_id || 'ORD-EVEREST-881'}</strong></div>
+                    <div class="t-cell"><span class="t-lbl" style="color: #71717a; font-size: 0.65rem; display:block;">SPEED (PPM)</span><strong class="t-val mono" style="color: #111111;">${m.current_rpm || 720} PPM</strong></div>
+                    <div class="t-cell"><span class="t-lbl" style="color: #71717a; font-size: 0.65rem; display:block;">WEFT SENSOR</span><span class="t-val mono" style="color: #15803d; font-weight:700;">${m.sensor_status || 'Normal (Optical OK)'}</span></div>
+                    <div class="t-cell"><span class="t-lbl" style="color: #71717a; font-size: 0.65rem; display:block;">QC PASS YIELD</span><strong class="t-val mono" style="color: #15803d;">${m.qc_yield_pct || 98.4}%</strong></div>
                 </div>
             `;
         } else if (m.stage === "SPINNING") {
             specRows = `
-                <div class="textile-subgrid">
-                    <div class="t-cell"><span class="t-lbl">SPINDLES</span><span class="t-val mono">${m.spindles_active || '1,008'}</span></div>
-                    <div class="t-cell"><span class="t-lbl">YARN COUNT</span><span class="t-val mono">${m.yarn_count_spec || '60s Ne'}</span></div>
-                    <div class="t-cell"><span class="t-lbl">TWIST MULT</span><span class="t-val mono">${m.twist_multiplier || '3.85 TM'}</span></div>
-                    <div class="t-cell"><span class="t-lbl">BREAK RATE</span><span class="t-val mono">${m.end_breakage_rate || '1.2/k'}</span></div>
-                    <div class="t-cell"><span class="t-lbl">EFFICIENCY</span><span class="t-val mono">${m.running_efficiency_pct || 0}%</span></div>
-                    <div class="t-cell"><span class="t-lbl">DOFF TIMER</span><span class="t-val mono">${m.doff_timer_min || 0} min</span></div>
+                <div class="textile-subgrid" style="grid-template-columns: repeat(2, 1fr); gap: 6px; margin-top: 8px; font-size: 0.72rem; background: #fafafa; border: 1px solid #e4e4e7; border-radius: 4px; padding: 6px 8px;">
+                    <div class="t-cell"><span class="t-lbl" style="color: #71717a; font-size: 0.65rem; display:block;">ACTIVE LOT</span><strong class="t-val mono" style="color: #111111; font-size: 0.68rem;">${m.yarn_count_spec || 'LOT-CTN-703'}</strong></div>
+                    <div class="t-cell"><span class="t-lbl" style="color: #71717a; font-size: 0.65rem; display:block;">SPINDLE SPEED</span><strong class="t-val mono" style="color: #111111;">${(m.current_rpm || 14800).toLocaleString()} RPM</strong></div>
+                    <div class="t-cell"><span class="t-lbl" style="color: #71717a; font-size: 0.65rem; display:block;">MOTOR TEMP</span><strong class="t-val mono" style="color: ${m.motor_temp_celsius > 50 ? '#dc2626' : '#111111'};">${m.motor_temp_celsius || 48.2}°C</strong></div>
+                    <div class="t-cell"><span class="t-lbl" style="color: #71717a; font-size: 0.65rem; display:block;">OPERATOR</span><strong class="t-val mono" style="color: #0284c7;">${m.assigned_operator || 'Worker #12'}</strong></div>
                 </div>
             `;
         } else if (m.stage === "DYEING") {
+            const tempVal = m.vat_temp_celsius || 85.4;
+            const tempPct = Math.min(100, Math.round((tempVal / 100) * 100));
             specRows = `
-                <div class="textile-subgrid">
-                    <div class="t-cell"><span class="t-lbl">MACHINE</span><span class="t-val">${m.dye_machine_type || 'Soft Flow'}</span></div>
-                    <div class="t-cell"><span class="t-lbl">LIQUOR RATIO</span><span class="t-val mono">${m.liquor_ratio || '1:6'}</span></div>
-                    <div class="t-cell"><span class="t-lbl">TEMP C</span><span class="t-val mono ${m.vat_temp_celsius > 90 ? 'amber' : ''}">${m.vat_temp_celsius || 24}°C</span></div>
-                    <div class="t-cell"><span class="t-lbl">pH LEVEL</span><span class="t-val mono">${m.ph_level || 6.5}</span></div>
-                    <div class="t-cell"><span class="t-lbl">ΔE TOLERANCE</span><span class="t-val mono">${m.delta_e_tolerance || 0.4}</span></div>
-                    <div class="t-cell"><span class="t-lbl">RECIPE</span><span class="t-val mono">${m.recipe_id || 'NONE'}</span></div>
+                <div class="textile-subgrid" style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px; font-size: 0.72rem; background: #fafafa; border: 1px solid #e4e4e7; border-radius: 4px; padding: 6px 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="color: #71717a;">BATH TEMPERATURE:</span>
+                        <strong style="color: #111111; font-family: var(--font-mono);">${tempVal}°C (${m.sub_status || 'Batch Heating'})</strong>
+                    </div>
+                    <!-- Temperature Gauge Bar -->
+                    <div style="background: #e4e4e7; height: 6px; border-radius: 3px; overflow: hidden;">
+                        <div style="background: #d97706; height: 100%; width: ${tempPct}%; transition: width 0.3s ease;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: #71717a;">LIQUOR & pH:</span>
+                        <strong style="color: #111111; font-family: var(--font-mono);">pH ${m.ph_level || 6.2} | ${m.liquor_ratio || '1:8 Ratio'}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: #71717a;">TARGET SHADE:</span>
+                        <strong style="color: #0284c7; font-family: var(--font-mono);">${m.target_shade || '#2B4C7E (Deep Navy)'}</strong>
+                    </div>
                 </div>
             `;
         }
 
         div.innerHTML = `
-            <div class="machine-header">
+            <div class="machine-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
                 <div>
-                    <span class="machine-id">${m.machine_id}</span>
-                    <div style="font-size: 0.72rem; color: #64748b; font-family: var(--font-mono);">${m.stage} · ${m.assigned_order_id ? m.assigned_order_id.toUpperCase() : 'NO ORDER'}</div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <strong class="machine-id" style="font-family: var(--font-display); font-size: 1rem; color: #111111;">${m.machine_id}</strong>
+                        ${isBenchmark ? '<span style="font-size: 0.62rem; background: #FFCD11; color: #111111; padding: 1px 5px; font-weight: 800; border-radius: 2px;">C++ DAEMON</span>' : ''}
+                    </div>
+                    <div style="font-size: 0.7rem; color: #71717a; font-family: var(--font-mono);">${m.stage} · ${m.assigned_order_id ? m.assigned_order_id.toUpperCase() : 'NO ORDER'}</div>
                 </div>
-                <span class="status-badge ${m.current_status}">${m.current_status}</span>
+                <span class="status-badge ${m.current_status}" style="font-size: 0.68rem; font-weight: 800;">
+                    ${m.current_status === 'RUNNING' ? '● RUNNING' : (m.is_idle_alert ? '⚠ >120s IDLE' : '○ IDLE')}
+                </span>
             </div>
             
-            <div class="telemetry-metrics-grid">
+            <div class="telemetry-metrics-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; background: #fafafa; border: 1px solid #e4e4e7; border-radius: 4px; padding: 6px 8px; margin-bottom: 6px;">
                 <div class="metric-item">
-                    <span class="metric-label">Loom Speed (RPM)</span>
-                    <span class="metric-val ${m.current_status === 'RUNNING' ? 'green' : 'amber'}">${m.current_rpm || 0} RPM</span>
+                    <span class="metric-label" style="font-size: 0.65rem; color: #71717a; text-transform: uppercase;">Motor Load</span>
+                    <strong class="metric-val" style="font-family: var(--font-mono); font-size: 0.95rem; color: #111111;">${m.current_power_draw_amps.toFixed(1)} A</strong>
                 </div>
                 <div class="metric-item">
-                    <span class="metric-label">Motor Load</span>
-                    <span class="metric-val ${m.current_status === 'RUNNING' ? 'cyan' : ''}">${m.current_power_draw_amps.toFixed(1)} A</span>
-                </div>
-                <div class="metric-item">
-                    <span class="metric-label">Picks Cumulative</span>
-                    <span class="metric-val">${m.current_picks_cumulative.toLocaleString()}</span>
-                </div>
-                <div class="metric-item">
-                    <span class="metric-label">Idle Inactivity</span>
-                    <span class="metric-val ${m.idle_seconds > 120 ? 'amber' : ''}">${m.idle_seconds}s</span>
+                    <span class="metric-label" style="font-size: 0.65rem; color: #71717a; text-transform: uppercase;">Picks Cumulative</span>
+                    <strong class="metric-val" style="font-family: var(--font-mono); font-size: 0.95rem; color: #111111;">${m.current_picks_cumulative.toLocaleString()}</strong>
                 </div>
             </div>
 
             <!-- Live 30-Second Rolling Waveform Sparkline -->
-            <div style="margin: 0.5rem 0 0.25rem 0; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px 8px; display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-size: 0.65rem; font-family: var(--font-mono); color: #64748b; font-weight: 600;">LIVE OSCILLATION (RPM / cN)</span>
-                <canvas id="sparkline_${m.machine_id}" width="140" height="24" style="display: block;"></canvas>
+            <div style="margin: 0.35rem 0; background: #ffffff; border: 1px solid #e4e4e7; border-radius: 4px; padding: 4px 8px; display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 0.65rem; font-family: var(--font-mono); color: #71717a; font-weight: 700;">LIVE TELEMETRY WAVEFORM</span>
+                <canvas id="sparkline_${m.machine_id}" width="130" height="20" style="display: block;"></canvas>
             </div>
 
             ${specRows}
 
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid #f1f5f9;">
-                <span style="font-size: 0.72rem; color: #64748b; font-family: var(--font-mono);">Overhead: $${m.overhead_hourly_rate.toFixed(2)}/hr</span>
-                <div style="display: flex; gap: 6px;">
-                    <button class="btn btn-ghost" style="padding: 0.25rem 0.55rem; font-size: 0.7rem; border-radius: 4px; border-color: #cbd5e1;" onclick="openMachineTuning('${m.machine_id}')" title="Dynamically tune RPM, load, and tension">
-                        ⚙️ Tune
-                    </button>
-                    <button class="btn btn-ghost" style="padding: 0.25rem 0.55rem; font-size: 0.7rem; border-radius: 4px;" onclick="openItemPassport('${m.assigned_order_id || 'ord-zara-081'}')">
-                        📋 Specs
-                    </button>
-                    <button class="btn btn-ghost" style="padding: 0.25rem 0.55rem; font-size: 0.7rem; border-radius: 4px;" onclick="toggleMachine('${m.machine_id}')">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.6rem; padding-top: 0.5rem; border-top: 1px solid #e4e4e7;">
+                <span style="font-size: 0.72rem; color: #71717a; font-family: var(--font-mono);">$${m.overhead_hourly_rate.toFixed(2)}/hr</span>
+                <div style="display: flex; gap: 5px;">
+                    <button class="btn btn-ghost" style="padding: 2px 7px; font-size: 0.68rem; border-radius: 3px; font-weight: 700;" onclick="toggleMachine('${m.machine_id}')">
                         ${m.current_status === 'RUNNING' ? 'Pause' : 'Start'}
+                    </button>
+                    <button class="btn btn-ghost" style="padding: 2px 7px; font-size: 0.68rem; border-radius: 3px; font-weight: 700;" onclick="openItemPassport('${m.assigned_order_id || 'ord-zara-081'}')">
+                        Specs
                     </button>
                 </div>
             </div>
-
         `;
         return div;
     }
@@ -643,6 +729,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("triggerPulseBtn").addEventListener("click", () => {
         soundManager.playClick();
         store.tickTelemetry();
+        
+        // Micro-pulse animation on Loom 04
+        const loom4Card = document.getElementById("card_WEAVE-LOOM-04");
+        if (loom4Card) {
+            loom4Card.style.transition = "transform 0.15s ease, border-color 0.15s ease";
+            loom4Card.style.transform = "scale(1.02)";
+            loom4Card.style.borderColor = "#FFCD11";
+            setTimeout(() => {
+                loom4Card.style.transform = "scale(1.0)";
+                loom4Card.style.borderColor = "";
+            }, 250);
+        }
     });
 
     document.getElementById("toggleBenchmarkLoomBtn").addEventListener("click", () => {
@@ -650,19 +748,40 @@ document.addEventListener("DOMContentLoaded", async () => {
         store.toggleMachineState("WEAVE-LOOM-04");
     });
 
+    const btnToggleJson = document.getElementById("btnToggleCppJson");
+    if (btnToggleJson) {
+        btnToggleJson.addEventListener("click", () => {
+            soundManager.playClick();
+            const viewer = document.getElementById("cppJsonViewer");
+            if (viewer) {
+                viewer.style.display = viewer.style.display === "none" ? "block" : "none";
+            }
+        });
+    }
+
     const autoSimBtn = document.getElementById("autoSimulateBtn");
     autoSimBtn.addEventListener("click", () => {
         soundManager.playClick();
         isAutoSimRunning = !isAutoSimRunning;
         if (isAutoSimRunning) {
             autoSimBtn.textContent = "⏸ Stop Auto-Loop";
-            autoSimBtn.classList.add("btn-danger");
-            autoSimBtn.classList.remove("btn-primary");
-            autoSimTimer = setInterval(() => store.tickTelemetry(), 1000);
+            autoSimBtn.style.background = "#dc2626";
+            autoSimBtn.style.borderColor = "#dc2626";
+            autoSimBtn.style.color = "#ffffff";
+            autoSimTimer = setInterval(() => {
+                store.tickTelemetry();
+                // Brief subtle pulse on Loom 04
+                const loom4Card = document.getElementById("card_WEAVE-LOOM-04");
+                if (loom4Card) {
+                    loom4Card.style.borderColor = "#FFCD11";
+                    setTimeout(() => { if (loom4Card) loom4Card.style.borderColor = ""; }, 300);
+                }
+            }, 1000);
         } else {
             autoSimBtn.textContent = "▶ Start Auto-Loop (1s Interval)";
-            autoSimBtn.classList.remove("btn-danger");
-            autoSimBtn.classList.add("btn-primary");
+            autoSimBtn.style.background = "#FFCD11";
+            autoSimBtn.style.borderColor = "#FFCD11";
+            autoSimBtn.style.color = "#111111";
             clearInterval(autoSimTimer);
         }
     });

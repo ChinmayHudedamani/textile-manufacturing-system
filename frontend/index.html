@@ -428,37 +428,120 @@
         </div>
       </div>
 
-      <!-- Floor Stage Sections -->
-      <div class="floor-map-container">
-        <!-- 1. Spinning Stage -->
-        <div class="floor-stage-label">Section 1: Spinning & Preparatory Frames (RS-485 / Modbus)</div>
-        <div class="grid-2" id="spinningMachinesContainer" style="margin-bottom: 1.5rem;"></div>
-
-        <!-- 2. Weaving Shed -->
-        <div class="floor-stage-label">Section 2: Weaving Looms (High-Speed Airjets / Optical Pick Sensors)</div>
-        <div class="grid-4" id="weavingMachinesContainer" style="margin-bottom: 1.5rem;"></div>
-
-        <!-- 3. Dyeing Vats -->
-        <div class="floor-stage-label">Section 3: Dyeing & Finishing Vats (Temperature & Viscosity Probes)</div>
-        <div class="grid-2" id="dyeingMachinesContainer"></div>
-      </div>
-
-      <!-- Interactive Edge Telemetry Simulator Bar -->
-      <div class="sim-control-bar">
-        <div class="sim-info">
-          <div style="font-size: 1.25rem;">🎛️</div>
-          <div>
-            <div style="font-weight: 700; font-size: 0.9rem;">C++20 Native Edge Daemon Ingestion Simulator</div>
-            <div style="font-size: 0.75rem; color: var(--text-dim);">Pushes zero-allocation circular buffer samples to MQTT mesh or REST endpoint</div>
+      <!-- Floor Stage Sections: High-Performance Expandable Machine Registry Accordions -->
+      <div class="floor-map-container" style="display: flex; flex-direction: column; gap: 1rem;">
+        
+        <!-- SECTION 1: SPINNING & PREPARATORY FRAMES -->
+        <div class="floor-accordion-card" id="accordion-spinning">
+          <div class="floor-accordion-header" onclick="toggleFloorSection('spinning')" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: #ffffff; border: 1px solid #d4d4d8; border-left: 4px solid #111111; padding: 12px 18px; border-radius: 4px; user-select: none;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span id="chevron-spinning" style="font-size: 0.85rem; color: #71717a; transition: transform 0.2s ease;">▼</span>
+              <div>
+                <strong style="font-family: var(--font-display); font-size: 0.95rem; color: #111111; letter-spacing: 0.02em;">SECTION 1: SPINNING & PREPARATORY FRAMES (RS-485 / MODBUS)</strong>
+                <div style="font-size: 0.72rem; color: #71717a; font-family: var(--font-mono);" id="spinningSummaryText">4 Frames Total · 3/4 Active · 1 Idle</div>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="pill-amber" style="font-size: 0.7rem; font-weight: 800; background: #FFCD11; color: #111111; border: none; border-radius: 2px;" id="spinningPowerBadge">56.3 A (RS-485)</span>
+              <span style="font-size: 0.72rem; color: #52525b; font-weight: 700;">[Toggle]</span>
+            </div>
+          </div>
+          <div class="floor-accordion-body" id="body-spinning" style="display: block; margin-top: 10px;">
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4" id="spinningMachinesContainer"></div>
           </div>
         </div>
-        <div style="display: flex; gap: 0.5rem; align-items: center;">
-          <button class="btn btn-ghost" id="toggleBenchmarkLoomBtn">
-            Toggle Loom WEAVE-LOOM-04 (Running/Idle)
-          </button>
-          <button class="btn btn-primary" id="autoSimulateBtn">
-            ▶ Start Auto-Loop (1s Interval)
-          </button>
+
+        <!-- SECTION 2: WEAVING LOOMS (CORE DEMO & BENCHMARK AREA) -->
+        <div class="floor-accordion-card" id="accordion-weaving">
+          <div class="floor-accordion-header" onclick="toggleFloorSection('weaving')" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: #ffffff; border: 1px solid #d4d4d8; border-left: 4px solid var(--cat-yellow); padding: 12px 18px; border-radius: 4px; user-select: none; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span id="chevron-weaving" style="font-size: 0.85rem; color: #71717a; transition: transform 0.2s ease;">▼</span>
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <strong style="font-family: var(--font-display); font-size: 0.95rem; color: #111111; letter-spacing: 0.02em;">SECTION 2: WEAVING LOOMS (HIGH-SPEED AIR-JETS / OPTICAL PICK SENSORS)</strong>
+                  <span style="font-size: 0.65rem; background: #111111; color: #FFCD11; padding: 2px 6px; font-weight: 800; font-family: var(--font-mono); border-radius: 2px;">CORE DEMO</span>
+                </div>
+                <div style="font-size: 0.72rem; color: #71717a; font-family: var(--font-mono);" id="weavingSummaryText">6 Looms Total · 6/6 Active · Tsudakoma & Picanol Fleet</div>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="pill-amber" style="font-size: 0.7rem; font-weight: 800; background: #111111; color: #FFCD11; border: none; border-radius: 2px;" id="weavingPowerBadge">93.8 A · 720 PPM</span>
+              <span style="font-size: 0.72rem; color: #52525b; font-weight: 700;">[Toggle]</span>
+            </div>
+          </div>
+          <div class="floor-accordion-body" id="body-weaving" style="display: block; margin-top: 10px;">
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" id="weavingMachinesContainer"></div>
+          </div>
+        </div>
+
+        <!-- SECTION 3: DYEING & FINISHING VATS -->
+        <div class="floor-accordion-card" id="accordion-dyeing">
+          <div class="floor-accordion-header" onclick="toggleFloorSection('dyeing')" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: #ffffff; border: 1px solid #d4d4d8; border-left: 4px solid #111111; padding: 12px 18px; border-radius: 4px; user-select: none;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span id="chevron-dyeing" style="font-size: 0.85rem; color: #71717a; transition: transform 0.2s ease;">▼</span>
+              <div>
+                <strong style="font-family: var(--font-display); font-size: 0.95rem; color: #111111; letter-spacing: 0.02em;">SECTION 3: DYEING & FINISHING VATS (TEMPERATURE & VISCOSITY PROBES)</strong>
+                <div style="font-size: 0.72rem; color: #71717a; font-family: var(--font-mono);" id="dyeingSummaryText">3 Vats Total · 3/3 Active · Thermal Liquor Controls</div>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="pill-amber" style="font-size: 0.7rem; font-weight: 800; background: #FFCD11; color: #111111; border: none; border-radius: 2px;" id="dyeingPowerBadge">68.6 A · 85.4°C AVG</span>
+              <span style="font-size: 0.72rem; color: #52525b; font-weight: 700;">[Toggle]</span>
+            </div>
+          </div>
+          <div class="floor-accordion-body" id="body-dyeing" style="display: block; margin-top: 10px;">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="dyeingMachinesContainer"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- POLISHED C++20 NATIVE EDGE DAEMON INGESTION SIMULATOR STRIP -->
+      <div style="margin-top: 1.75rem; background: #111111; border: 2px solid #27272a; border-top: 4px solid #FFCD11; border-radius: 4px; padding: 1.25rem 1.5rem; color: #f4f4f5; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 38px; height: 38px; background: #FFCD11; color: #111111; display: grid; place-items: center; font-weight: 900; font-size: 1rem; border-radius: 2px;">C++</div>
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <strong style="font-family: var(--font-display); font-size: 1rem; color: #ffffff; letter-spacing: 0.03em;">C++20 Native Edge Telemetry Daemon</strong>
+                <span style="font-family: var(--font-mono); font-size: 0.65rem; background: #27272a; color: #FFCD11; padding: 2px 6px; border-radius: 2px; font-weight: 700;">ZERO-ALLOCATION SPSC RING</span>
+              </div>
+              <div style="font-family: var(--font-mono); font-size: 0.72rem; color: #a1a1aa; margin-top: 2px;">
+                Topic: <code style="color: #FFCD11; background: rgba(255,205,17,0.1); padding: 2px 6px; border-radius: 2px;" id="cppActiveTopic">spBv1.0/everest_mill/DDATA/edge_node_01/WEAVE-LOOM-04</code>
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <button class="btn btn-ghost" id="toggleBenchmarkLoomBtn" style="background: #27272a; color: #FFCD11; border-color: #3f3f46; font-size: 0.78rem; font-weight: 800;">
+              Toggle Loom WEAVE-LOOM-04 (RUNNING / IDLE)
+            </button>
+            <button class="btn btn-primary" id="autoSimulateBtn" style="background: #FFCD11; color: #111111; border-color: #FFCD11; font-size: 0.78rem; font-weight: 800;">
+              ▶ Start Auto-Loop (1s Interval)
+            </button>
+            <button class="btn btn-ghost" id="btnToggleCppJson" style="background: #1c1c1e; color: #e4e4e7; border-color: #3f3f46; font-size: 0.75rem; font-weight: 700;">
+              { } Inspect C++ JSON
+            </button>
+          </div>
+        </div>
+
+        <!-- Inline C++ Live Telemetry JSON Stream -->
+        <div id="cppJsonViewer" style="display: block; background: #09090b; border: 1px solid #27272a; border-radius: 4px; padding: 12px 16px; font-family: var(--font-mono); font-size: 0.75rem; color: #22c55e; overflow-x: auto;">
+          <div style="display: flex; justify-content: space-between; color: #71717a; margin-bottom: 6px; font-size: 0.68rem; text-transform: uppercase;">
+            <span>Live Hardware Register Packet (LockFreeSPSCRingBuffer)</span>
+            <span id="cppPacketTimestamp">TIMESTAMP: LIVE</span>
+          </div>
+          <pre id="cppPayloadCode" style="margin: 0; color: #e4e4e7; line-height: 1.5;">{
+  "machine_id": "WEAVE-LOOM-04",
+  "state": "RUNNING",
+  "amps": 14.8,
+  "rpm": 720,
+  "picks": 105412,
+  "weft_tension_cn": 182,
+  "ipc": "MQTT_QOS_1",
+  "seq": 148,
+  "latency_us": 42
+}</pre>
         </div>
       </div>
     </section>
