@@ -766,6 +766,190 @@
     </div>
   </div>
 
+  <!-- INDUSTRIAL ITEM PASSPORT MODAL (FABRIC SPECIFICATIONS & DYE LOT MATRIX) -->
+  <div class="alarm-overlay" id="itemPassportModal" style="display: none;">
+    <div class="passport-modal-card">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.75rem;">
+        <div>
+          <div style="font-family: var(--font-mono); font-size: 0.72rem; color: #64748b; letter-spacing: 0.08em; text-transform: uppercase;">
+            FABRIC TECHNICAL PASSPORT & BOM LINEAGE
+          </div>
+          <h2 style="font-family: var(--font-display); font-size: 1.6rem; font-weight: 800; color: #0f172a; margin: 2px 0 0 0;" id="passportTitle">
+            ORD-2026-081: 60s Combed Cotton Poplin
+          </h2>
+        </div>
+        <button id="closePassportBtn" style="background: none; border: 0; font-size: 1.5rem; color: #64748b; cursor: pointer; line-height: 1;">✕</button>
+      </div>
+
+      <!-- Passport Tabs -->
+      <div class="passport-tab-strip" id="passportTabs">
+        <button class="passport-tab active" data-tab="tab-specs">1. Technical Specs & Weave</button>
+        <button class="passport-tab" data-tab="tab-colorway">2. Colorway & Lab Dip Matrix</button>
+        <button class="passport-tab" data-tab="tab-route">3. BOM & Routing Pipeline</button>
+        <button class="passport-tab" data-tab="tab-recipe">4. Dye Lot & Delta-E Log</button>
+      </div>
+
+      <!-- Tab 1: Technical Specs -->
+      <div id="tab-specs" class="passport-tab-pane">
+        <div class="grid-3" style="gap: 1rem; margin-bottom: 1.25rem;">
+          <div style="background: #f8fafc; padding: 0.85rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <div class="form-label" style="font-size: 0.68rem;">Fiber Composition</div>
+            <div style="font-weight: 700; font-size: 1rem; color: #0f172a;" id="passComp">100% Combed Cotton</div>
+            <div style="font-size: 0.72rem; color: #64748b;">Ring-Spun Long Staple Giza 86</div>
+          </div>
+          <div style="background: #f8fafc; padding: 0.85rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <div class="form-label" style="font-size: 0.68rem;">Fabric Density (GSM)</div>
+            <div style="font-weight: 700; font-size: 1rem; color: #0f172a;" id="passGsm">125 GSM (Grams / m²)</div>
+            <div style="font-size: 0.72rem; color: #64748b;">Tolerance: ± 3% (121 - 129 GSM)</div>
+          </div>
+          <div style="background: #f8fafc; padding: 0.85rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <div class="form-label" style="font-size: 0.68rem;">Weave Architecture</div>
+            <div style="font-weight: 700; font-size: 1rem; color: #0f172a;" id="passWeave">Plain Poplin 1/1</div>
+            <div style="font-size: 0.72rem; color: #64748b;">Warp 136 x Weft 72 Ends/Picks/Inch</div>
+          </div>
+        </div>
+
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+          <div style="font-weight: 700; font-size: 0.85rem; margin-bottom: 0.5rem; color: #0f172a;">Yarn Count & Engineering Specifications</div>
+          <div class="textile-subgrid">
+            <div class="t-cell"><span class="t-lbl">WARP YARN COUNT</span><span class="t-val mono">60s Ne Combed</span></div>
+            <div class="t-cell"><span class="t-lbl">WEFT YARN COUNT</span><span class="t-val mono">60s Ne Combed</span></div>
+            <div class="t-cell"><span class="t-lbl">TOTAL ENDS</span><span class="t-val mono">8,160 Ends</span></div>
+            <div class="t-cell"><span class="t-lbl">REED WIDTH</span><span class="t-val mono">190.0 cm</span></div>
+            <div class="t-cell"><span class="t-lbl">FINISH WIDTH</span><span class="t-val mono">148.0 cm (58")</span></div>
+            <div class="t-cell"><span class="t-lbl">SHRINKAGE WARP</span><span class="t-val mono">&lt; 1.5% ISO 6330</span></div>
+            <div class="t-cell"><span class="t-lbl">SHRINKAGE WEFT</span><span class="t-val mono">&lt; 1.0% ISO 6330</span></div>
+            <div class="t-cell"><span class="t-lbl">TEAR STRENGTH</span><span class="t-val mono">18.5 N (ASTM D1424)</span></div>
+          </div>
+        </div>
+
+        <!-- Inline Dual-Unit Conversion Calculator -->
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 0.85rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+          <div>
+            <strong style="color: #166534; font-size: 0.85rem;">Inline Dual-Unit Converter (GSM Formula)</strong>
+            <div style="font-size: 0.75rem; color: #15803d;">Formula: Weight (kg) = Length (m) × (Width 1.48m × GSM 125) / 1000</div>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <input type="number" id="calcMetersInput" class="form-input mono" value="100" style="width: 100px; padding: 4px 8px; font-size: 0.85rem;" placeholder="Meters">
+            <span style="font-size: 0.8rem; font-weight: 700; color: #166534;">Meters =</span>
+            <span id="calcKgOutput" style="font-family: var(--font-mono); font-weight: 700; font-size: 0.95rem; color: #166534;">18.50 KG</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Colorway & Lab Dip Matrix -->
+      <div id="tab-colorway" class="passport-tab-pane" style="display: none;">
+        <table class="manifest-log-table" style="margin-top: 0;">
+          <thead>
+            <tr>
+              <th>COLORWAY</th>
+              <th>PANTONE TCX / TPG</th>
+              <th>LAB DIP ID</th>
+              <th>SPECTRO ΔE</th>
+              <th>APPROVAL STATUS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <div class="pantone-swatch-box">
+                  <span class="pantone-color-chip" style="background:#2563EB;"></span>
+                  <span>Cobalt Riviera</span>
+                </div>
+              </td>
+              <td class="mono">19-4052 TCX</td>
+              <td class="mono">LD-2026-904-A</td>
+              <td class="mono" style="color:#059669; font-weight:700;">0.28 (Pass)</td>
+              <td><span class="status-badge RUNNING">APPROVED (BUYER)</span></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="pantone-swatch-box">
+                  <span class="pantone-color-chip" style="background:#0f172a;"></span>
+                  <span>Midnight Black</span>
+                </div>
+              </td>
+              <td class="mono">19-4008 TCX</td>
+              <td class="mono">LD-2026-904-B</td>
+              <td class="mono" style="color:#059669; font-weight:700;">0.34 (Pass)</td>
+              <td><span class="status-badge RUNNING">APPROVED (BUYER)</span></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="pantone-swatch-box">
+                  <span class="pantone-color-chip" style="background:#94a3b8;"></span>
+                  <span>Oatmeal Slub</span>
+                </div>
+              </td>
+              <td class="mono">14-1108 TCX</td>
+              <td class="mono">LD-2026-904-C</td>
+              <td class="mono" style="color:#d97706; font-weight:700;">0.85 (Review)</td>
+              <td><span class="status-badge IDLE">LAB SUBMISSION</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Tab 3: Route Tracker -->
+      <div id="tab-route" class="passport-tab-pane" style="display: none;">
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; gap: 12px; align-items: center; padding: 10px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #059669;">
+            <div style="font-family: var(--font-mono); font-weight: 700; color: #059669; min-width: 60px;">STAGE 1</div>
+            <div style="flex: 1;">
+              <strong>Raw Yarn Inward & Conditioning:</strong> Lot LOT-COTTON-992 (Gujarat Agro Fibers)
+              <div style="font-size: 0.72rem; color: #64748b;">Moisture Regain: 7.8% · Combed Ring Yarn 60s</div>
+            </div>
+            <span class="status-badge RUNNING">COMPLETED</span>
+          </div>
+          <div style="display: flex; gap: 12px; align-items: center; padding: 10px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #059669;">
+            <div style="font-family: var(--font-mono); font-weight: 700; color: #059669; min-width: 60px;">STAGE 2</div>
+            <div style="flex: 1;">
+              <strong>Warping & Sizing (Beaming):</strong> High-Speed Karl Mayer Direct Warper
+              <div style="font-size: 0.72rem; color: #64748b;">PVA + Modified Starch Blend · Size Add-on: 11.2%</div>
+            </div>
+            <span class="status-badge RUNNING">COMPLETED</span>
+          </div>
+          <div style="display: flex; gap: 12px; align-items: center; padding: 10px; background: #f0f9ff; border-radius: 8px; border-left: 4px solid #0284c7;">
+            <div style="font-family: var(--font-mono); font-weight: 700; color: #0284c7; min-width: 60px;">STAGE 3</div>
+            <div style="flex: 1;">
+              <strong>Airjet Weaving (Greige Fabric):</strong> Looms WEAVE-LOOM-01, 04
+              <div style="font-size: 0.72rem; color: #64748b;">3,450 / 5,000 meters produced · Greige GSM: 121.5</div>
+            </div>
+            <span class="status-badge RUNNING">IN EXECUTION</span>
+          </div>
+          <div style="display: flex; gap: 12px; align-items: center; padding: 10px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #94a3b8;">
+            <div style="font-family: var(--font-mono); font-weight: 700; color: #64748b; min-width: 60px;">STAGE 4</div>
+            <div style="flex: 1;">
+              <strong>Dyeing & Stenter Finishing:</strong> Continuous Bleach + Reactive Soft Flow
+              <div style="font-size: 0.72rem; color: #64748b;">Bruckner 8-Chamber Gas Stenter · Width Fixed at 148 cm</div>
+            </div>
+            <span class="status-badge IDLE">QUEUED</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 4: Recipe Log -->
+      <div id="tab-recipe" class="passport-tab-pane" style="display: none;">
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+            <strong>Chemical & Reactive Dye Recipe: REC-MS-TWILL-NAVY-B</strong>
+            <span class="mono" style="font-size: 0.8rem; color: #0284c7;">Spectrophotometer: Datacolor 800</span>
+          </div>
+          <div class="textile-subgrid">
+            <div class="t-cell"><span class="t-lbl">REACTIVE BLUE 221</span><span class="t-val mono">2.85% (o.w.f)</span></div>
+            <div class="t-cell"><span class="t-lbl">REACTIVE RED 195</span><span class="t-val mono">0.42% (o.w.f)</span></div>
+            <div class="t-cell"><span class="t-lbl">GLAUBER SALT (Na2SO4)</span><span class="t-val mono">60.0 g/L</span></div>
+            <div class="t-cell"><span class="t-lbl">SODA ASH (Na2CO3)</span><span class="t-val mono">18.0 g/L</span></div>
+            <div class="t-cell"><span class="t-lbl">WASHING FASTNESS</span><span class="t-val mono">Grade 4-5 (ISO 105-C06)</span></div>
+            <div class="t-cell"><span class="t-lbl">RUBBING (DRY/WET)</span><span class="t-val mono">Grade 4 / Grade 3-4</span></div>
+            <div class="t-cell"><span class="t-lbl">LIGHT FASTNESS</span><span class="t-val mono">Grade 6 (Blue Wool)</span></div>
+            <div class="t-cell"><span class="t-lbl">CIE L* a* b*</span><span class="t-val mono">22.4 / 1.8 / -14.6</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- JAVASCRIPT LOGIC -->
   <script src="js/sound.js"></script>
   <script src="js/store.js"></script>

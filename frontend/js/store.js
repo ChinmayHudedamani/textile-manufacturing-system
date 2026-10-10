@@ -90,7 +90,15 @@ class ETMSStore {
                     current_power_draw_amps: 24.5,
                     current_rpm: 11800,
                     idle_seconds: 0,
-                    is_idle_alert: false
+                    is_idle_alert: false,
+                    // Industrial Textile Technical Attributes
+                    spindles_active: "1,008 / 1,008",
+                    yarn_count_spec: "60s Ne Combed",
+                    twist_multiplier: "3.85 TM",
+                    end_breakage_rate: "1.2 / 1000 sp-hr",
+                    running_efficiency_pct: 98.3,
+                    doff_timer_min: 42,
+                    roving_lot: "ROV-COT-992"
                 },
                 {
                     machine_id: "SPIN-FRAME-02",
@@ -103,7 +111,14 @@ class ETMSStore {
                     current_power_draw_amps: 1.8,
                     current_rpm: 0,
                     idle_seconds: 185, // > 120s: IDLE ALERT TRIGGERED
-                    is_idle_alert: true
+                    is_idle_alert: true,
+                    spindles_active: "0 / 1,008",
+                    yarn_count_spec: "40s Ne Carded",
+                    twist_multiplier: "4.10 TM",
+                    end_breakage_rate: "0.0 / 1000 sp-hr",
+                    running_efficiency_pct: 0.0,
+                    doff_timer_min: 0,
+                    roving_lot: "ROV-POLY-401"
                 },
                 {
                     machine_id: "WEAVE-LOOM-01",
@@ -116,7 +131,18 @@ class ETMSStore {
                     current_power_draw_amps: 16.2,
                     current_rpm: 720,
                     idle_seconds: 0,
-                    is_idle_alert: false
+                    is_idle_alert: false,
+                    // Weaving Specifications
+                    loom_type: "Tsudakoma ZAX9100 Airjet",
+                    reed_width_cm: 190.0,
+                    warp_count: "60s Ne Combed",
+                    weft_count: "60s Ne Combed",
+                    picks_per_cm: 28.5,
+                    warp_tension_cn: 185,
+                    weft_insertion_m_min: 1368,
+                    running_efficiency_pct: 95.8,
+                    warp_stops_shift: 2,
+                    weft_stops_shift: 1
                 },
                 {
                     machine_id: "WEAVE-LOOM-02",
@@ -129,7 +155,17 @@ class ETMSStore {
                     current_power_draw_amps: 15.8,
                     current_rpm: 735,
                     idle_seconds: 0,
-                    is_idle_alert: false
+                    is_idle_alert: false,
+                    loom_type: "Picanol OmniPlus-i Airjet",
+                    reed_width_cm: 220.0,
+                    warp_count: "30s Ne Viscose Rayon",
+                    weft_count: "30s Ne Viscose Rayon",
+                    picks_per_cm: 24.0,
+                    warp_tension_cn: 210,
+                    weft_insertion_m_min: 1617,
+                    running_efficiency_pct: 97.4,
+                    warp_stops_shift: 1,
+                    weft_stops_shift: 0
                 },
                 {
                     machine_id: "WEAVE-LOOM-03",
@@ -142,7 +178,17 @@ class ETMSStore {
                     current_power_draw_amps: 0.0,
                     current_rpm: 0,
                     idle_seconds: 4200,
-                    is_idle_alert: true
+                    is_idle_alert: true,
+                    loom_type: "Itema R9500² Rapier",
+                    reed_width_cm: 190.0,
+                    warp_count: "75D Poly Filament",
+                    weft_count: "75D Poly Filament",
+                    picks_per_cm: 32.0,
+                    warp_tension_cn: 0,
+                    weft_insertion_m_min: 0,
+                    running_efficiency_pct: 0.0,
+                    warp_stops_shift: 6,
+                    weft_stops_shift: 4
                 },
                 {
                     machine_id: "WEAVE-LOOM-04", // SPEC BENCHMARK
@@ -155,7 +201,17 @@ class ETMSStore {
                     current_power_draw_amps: 15.4,
                     current_rpm: 740,
                     idle_seconds: 0,
-                    is_idle_alert: false
+                    is_idle_alert: false,
+                    loom_type: "Tsudakoma ZAX9100 Airjet",
+                    reed_width_cm: 190.0,
+                    warp_count: "60s Ne Combed",
+                    weft_count: "60s Ne Combed",
+                    picks_per_cm: 28.5,
+                    warp_tension_cn: 182,
+                    weft_insertion_m_min: 1406,
+                    running_efficiency_pct: 98.6,
+                    warp_stops_shift: 0,
+                    weft_stops_shift: 1
                 },
                 {
                     machine_id: "DYE-VAT-01",
@@ -168,7 +224,14 @@ class ETMSStore {
                     current_power_draw_amps: 28.0,
                     current_rpm: 115,
                     idle_seconds: 0,
-                    is_idle_alert: false
+                    is_idle_alert: false,
+                    dye_machine_type: "Thies Eco-Soft Soft-Flow Jet",
+                    liquor_ratio: "1:6",
+                    vat_temp_celsius: 98.4,
+                    target_temp_celsius: 98.0,
+                    ph_level: 6.2,
+                    delta_e_tolerance: 0.42,
+                    recipe_id: "REC-MS-TWILL-NAVY-B"
                 },
                 {
                     machine_id: "DYE-VAT-02",
@@ -181,7 +244,14 @@ class ETMSStore {
                     current_power_draw_amps: 2.1,
                     current_rpm: 0,
                     idle_seconds: 45,
-                    is_idle_alert: false
+                    is_idle_alert: false,
+                    dye_machine_type: "Fongs High-Temp Jigger",
+                    liquor_ratio: "1:4",
+                    vat_temp_celsius: 24.1,
+                    target_temp_celsius: 130.0,
+                    ph_level: 7.0,
+                    delta_e_tolerance: 0.35,
+                    recipe_id: "REC-IDLE-RINSE"
                 }
             ],
             orders: [

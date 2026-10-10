@@ -659,6 +659,109 @@ body {
 .metric-val.green { color: #059669; }
 .metric-val.amber { color: #d97706; }
 
+/* Industrial Textile High-Density Micro-Grid */
+.textile-subgrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 6px;
+  margin: 0.6rem 0;
+}
+
+.t-cell {
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  padding: 4px 6px;
+  border-radius: 4px;
+  border: 1px solid #f1f5f9;
+}
+
+.t-lbl {
+  font-size: 0.58rem;
+  font-family: var(--font-mono);
+  color: #64748b;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.t-val {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.t-val.mono {
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+}
+
+.t-val.amber {
+  color: #d97706;
+}
+
+/* Modal and Industrial Item Passport */
+.passport-modal-card {
+  max-width: 820px;
+  width: 95%;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 14px;
+  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.4);
+  color: #0f172a;
+  padding: 1.75rem;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.passport-tab-strip {
+  display: flex;
+  gap: 6px;
+  border-bottom: 2px solid #e2e8f0;
+  margin-bottom: 1.25rem;
+}
+
+.passport-tab {
+  padding: 8px 16px;
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  font-weight: 600;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #64748b;
+  cursor: pointer;
+  margin-bottom: -2px;
+}
+
+.passport-tab.active {
+  color: #0f172a;
+  border-bottom-color: #0ea5e9;
+  font-weight: 700;
+}
+
+.pantone-swatch-box {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+}
+
+.pantone-color-chip {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1px solid rgba(0,0,0,0.15);
+}
+
 /* Edge Simulator Control Bar */
 .sim-control-bar {
   background: rgba(15, 23, 42, 0.9);

@@ -132,6 +132,102 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
     }
 
+    // 3c. Industrial Item Passport Controller & Dual-Unit Calculator
+    const itemPassportModal = document.getElementById("itemPassportModal");
+    const closePassportBtn = document.getElementById("closePassportBtn");
+    const passportTabs = document.querySelectorAll("#passportTabs .passport-tab");
+    const passportPanes = document.querySelectorAll(".passport-tab-pane");
+
+    if (closePassportBtn && itemPassportModal) {
+        closePassportBtn.addEventListener("click", () => {
+            soundManager.playClick();
+            itemPassportModal.style.display = "none";
+        });
+
+        passportTabs.forEach(tab => {
+            tab.addEventListener("click", () => {
+                soundManager.playClick();
+                passportTabs.forEach(t => t.classList.remove("active"));
+                passportPanes.forEach(p => p.style.display = "none");
+
+                tab.classList.add("active");
+                const targetPane = document.getElementById(tab.dataset.tab);
+                if (targetPane) targetPane.style.display = "block";
+            });
+        });
+
+        // Dual-Unit Inline Calculator (Meters <-> Kg via GSM formula)
+        const calcMetersInput = document.getElementById("calcMetersInput");
+        const calcKgOutput = document.getElementById("calcKgOutput");
+        if (calcMetersInput && calcKgOutput) {
+            calcMetersInput.addEventListener("input", (e) => {
+                const meters = parseFloat(e.target.value) || 0;
+                // Formula: Weight (kg) = Length (m) * (Width 1.48m * GSM 125) / 1000
+                const kg = (meters * 1.48 * 125) / 1000;
+                calcKgOutput.textContent = `${kg.toFixed(2)} KG`;
+            });
+        }
+    }
+
+    window.openItemPassport = (orderId) => {
+        soundManager.playClick();
+        const order = store.state.orders.find(o => o.order_id === orderId) || store.state.orders[0];
+        if (order) {
+            document.getElementById("passportTitle").textContent = `${order.order_number}: ${order.fabric_specification}`;
+            document.getElementById("passComp").textContent = order.fabric_specification.includes("Cotton") ? "100% Combed Cotton" : (order.fabric_specification.includes("Rayon") ? "100% Viscose Rayon" : "100% Poly Filament");
+        }
+        itemPassportModal.style.display = "flex";
+    };
+
+    // 3d. Invisible Hardware Barcode / RFID Keyboard Listener
+    // Workers with handheld lasers stream keystrokes ending in Enter
+    let barcodeBuffer = "";
+    let lastKeyTime = Date.now();
+
+    window.addEventListener("keydown", (e) => {
+        // If user is typing in an active input field, let normal typing occur
+        if (["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement.tagName)) {
+            return;
+        }
+
+        const now = Date.now();
+        if (now - lastKeyTime > 350) {
+            barcodeBuffer = ""; // Reset buffer if slow human typing
+        }
+        lastKeyTime = now;
+
+        if (e.key === "Enter") {
+            if (barcodeBuffer.trim().length >= 4) {
+                const scannedBarcode = barcodeBuffer.trim().toUpperCase();
+                console.log(`[ETMS HARDWARE SCANNER TRIGGERED]: ${scannedBarcode}`);
+                barcodeBuffer = "";
+                
+                // Route to Roll inspection or Dispatch automatically
+                const matchingRoll = store.state.rolls.find(r => r.roll_barcode.toUpperCase() === scannedBarcode);
+                if (matchingRoll) {
+                    soundManager.playSuccessChime();
+                    const qcTab = document.querySelector(".nav-tab[data-scene='scene-qc']");
+                    if (qcTab) qcTab.click();
+                    setTimeout(() => {
+                        window.setQcBarcode(matchingRoll.roll_barcode);
+                    }, 100);
+                } else {
+                    // Check if yarn lot
+                    const matchingLot = store.state.batches.find(b => b.lot_number.toUpperCase() === scannedBarcode);
+                    if (matchingLot) {
+                        soundManager.playSuccessChime();
+                        const gateTab = document.querySelector(".nav-tab[data-scene='scene-gate']");
+                        if (gateTab) gateTab.click();
+                    } else {
+                        soundManager.playAlarmBuzzer();
+                    }
+                }
+            }
+        } else if (e.key.length === 1) {
+            barcodeBuffer += e.key;
+        }
+    });
+
     // 4. Initial Render of All Modules
     renderFloorHUD();
     renderGateInward();
@@ -219,39 +315,86 @@ document.addEventListener("DOMContentLoaded", async () => {
         const statusClass = m.current_status.toLowerCase();
 
         div.className = `machine-card ${statusClass} ${isIdleAlert ? 'idle-alert' : ''}`;
+
+        // Stage-Specific Industrial Textile Telemetry
+        let specRows = "";
+        if (m.stage === "WEAVING") {
+            specRows = `
+                <div class="textile-subgrid">
+                    <div class="t-cell"><span class="t-lbl">TYPE</span><span class="t-val">${m.loom_type || 'Airjet'}</span></div>
+                    <div class="t-cell"><span class="t-lbl">REED</span><span class="t-val">${m.reed_width_cm || 190} cm</span></div>
+                    <div class="t-cell"><span class="t-lbl">WARP YARN</span><span class="t-val mono">${m.warp_count || '60s Ne'}</span></div>
+                    <div class="t-cell"><span class="t-lbl">WEFT YARN</span><span class="t-val mono">${m.weft_count || '60s Ne'}</span></div>
+                    <div class="t-cell"><span class="t-lbl">PICKS/CM</span><span class="t-val mono">${m.picks_per_cm || 28.5}</span></div>
+                    <div class="t-cell"><span class="t-lbl">WARP TENS</span><span class="t-val mono">${m.warp_tension_cn || 180} cN</span></div>
+                    <div class="t-cell"><span class="t-lbl">INSERTION</span><span class="t-val mono">${m.weft_insertion_m_min || 0} m/min</span></div>
+                    <div class="t-cell"><span class="t-lbl">STOPS (W/F)</span><span class="t-val mono">${m.warp_stops_shift ?? 0} / ${m.weft_stops_shift ?? 0}</span></div>
+                </div>
+            `;
+        } else if (m.stage === "SPINNING") {
+            specRows = `
+                <div class="textile-subgrid">
+                    <div class="t-cell"><span class="t-lbl">SPINDLES</span><span class="t-val mono">${m.spindles_active || '1,008'}</span></div>
+                    <div class="t-cell"><span class="t-lbl">YARN COUNT</span><span class="t-val mono">${m.yarn_count_spec || '60s Ne'}</span></div>
+                    <div class="t-cell"><span class="t-lbl">TWIST MULT</span><span class="t-val mono">${m.twist_multiplier || '3.85 TM'}</span></div>
+                    <div class="t-cell"><span class="t-lbl">BREAK RATE</span><span class="t-val mono">${m.end_breakage_rate || '1.2/k'}</span></div>
+                    <div class="t-cell"><span class="t-lbl">EFFICIENCY</span><span class="t-val mono">${m.running_efficiency_pct || 0}%</span></div>
+                    <div class="t-cell"><span class="t-lbl">DOFF TIMER</span><span class="t-val mono">${m.doff_timer_min || 0} min</span></div>
+                </div>
+            `;
+        } else if (m.stage === "DYEING") {
+            specRows = `
+                <div class="textile-subgrid">
+                    <div class="t-cell"><span class="t-lbl">MACHINE</span><span class="t-val">${m.dye_machine_type || 'Soft Flow'}</span></div>
+                    <div class="t-cell"><span class="t-lbl">LIQUOR RATIO</span><span class="t-val mono">${m.liquor_ratio || '1:6'}</span></div>
+                    <div class="t-cell"><span class="t-lbl">TEMP C</span><span class="t-val mono ${m.vat_temp_celsius > 90 ? 'amber' : ''}">${m.vat_temp_celsius || 24}°C</span></div>
+                    <div class="t-cell"><span class="t-lbl">pH LEVEL</span><span class="t-val mono">${m.ph_level || 6.5}</span></div>
+                    <div class="t-cell"><span class="t-lbl">ΔE TOLERANCE</span><span class="t-val mono">${m.delta_e_tolerance || 0.4}</span></div>
+                    <div class="t-cell"><span class="t-lbl">RECIPE</span><span class="t-val mono">${m.recipe_id || 'NONE'}</span></div>
+                </div>
+            `;
+        }
+
         div.innerHTML = `
             <div class="machine-header">
                 <div>
                     <span class="machine-id">${m.machine_id}</span>
-                    <div style="font-size: 0.7rem; color: var(--text-dim);">${m.stage}</div>
+                    <div style="font-size: 0.72rem; color: #64748b; font-family: var(--font-mono);">${m.stage} · ${m.assigned_order_id ? m.assigned_order_id.toUpperCase() : 'NO ORDER'}</div>
                 </div>
                 <span class="status-badge ${m.current_status}">${m.current_status}</span>
             </div>
             
             <div class="telemetry-metrics-grid">
                 <div class="metric-item">
-                    <span class="metric-label">Speed (RPM)</span>
-                    <span class="metric-val ${m.current_status === 'RUNNING' ? 'green' : 'amber'}">${m.current_rpm || 0}</span>
+                    <span class="metric-label">Loom Speed (RPM)</span>
+                    <span class="metric-val ${m.current_status === 'RUNNING' ? 'green' : 'amber'}">${m.current_rpm || 0} RPM</span>
                 </div>
                 <div class="metric-item">
-                    <span class="metric-label">Current Draw</span>
+                    <span class="metric-label">Motor Load</span>
                     <span class="metric-val ${m.current_status === 'RUNNING' ? 'cyan' : ''}">${m.current_power_draw_amps.toFixed(1)} A</span>
                 </div>
                 <div class="metric-item">
-                    <span class="metric-label">Cumulative Picks</span>
+                    <span class="metric-label">Picks Cumulative</span>
                     <span class="metric-val">${m.current_picks_cumulative.toLocaleString()}</span>
                 </div>
                 <div class="metric-item">
-                    <span class="metric-label">Idle Seconds</span>
+                    <span class="metric-label">Idle Inactivity</span>
                     <span class="metric-val ${m.idle_seconds > 120 ? 'amber' : ''}">${m.idle_seconds}s</span>
                 </div>
             </div>
 
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
-                <span style="font-size: 0.7rem; color: var(--text-dim);">Overhead: $${m.overhead_hourly_rate}/hr</span>
-                <button class="btn btn-ghost" style="padding: 0.25rem 0.5rem; font-size: 0.7rem;" onclick="toggleMachine('${m.machine_id}')">
-                    ${m.current_status === 'RUNNING' ? 'Pause' : 'Start'}
-                </button>
+            ${specRows}
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid #f1f5f9;">
+                <span style="font-size: 0.72rem; color: #64748b; font-family: var(--font-mono);">Overhead: $${m.overhead_hourly_rate.toFixed(2)}/hr</span>
+                <div style="display: flex; gap: 6px;">
+                    <button class="btn btn-ghost" style="padding: 0.25rem 0.65rem; font-size: 0.7rem; border-radius: 4px;" onclick="openItemPassport('${m.assigned_order_id || 'ord-zara-081'}')">
+                        📋 Item Passport
+                    </button>
+                    <button class="btn btn-ghost" style="padding: 0.25rem 0.65rem; font-size: 0.7rem; border-radius: 4px;" onclick="toggleMachine('${m.machine_id}')">
+                        ${m.current_status === 'RUNNING' ? 'Pause' : 'Start'}
+                    </button>
+                </div>
             </div>
         `;
         return div;
