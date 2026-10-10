@@ -84,27 +84,58 @@
         </div>
       </div>
 
-      <!-- Overall Equipment Effectiveness (OEE) Metric Strip -->
-      <div class="grid-4" style="margin-bottom: 1.5rem;">
-        <div class="glass-panel" style="padding: 1rem;">
-          <div class="form-label">Plant OEE Score</div>
-          <div style="font-family: var(--font-display); font-size: 1.8rem; font-weight: 800; color: #34d399;">88.4%</div>
-          <div style="font-size: 0.75rem; color: var(--text-dim);">Availability: 92% | Quality: 96%</div>
+      <!-- Overall Equipment Effectiveness (OEE) Porsche Metric Strip -->
+      <div class="grid-4" style="margin-bottom: 2rem;">
+        <div class="porsche-stat-card">
+          <div style="display: flex; gap: 0.9rem; align-items: center;">
+            <div class="porsche-icon-box green">
+              <span>⚡</span>
+            </div>
+            <div>
+              <div class="porsche-stat-label">Plant OEE Score</div>
+              <div class="porsche-stat-num" style="color: #059669;">88.4%</div>
+              <div class="porsche-stat-sub">Avail: 92% · Qual: 96%</div>
+            </div>
+          </div>
         </div>
-        <div class="glass-panel" style="padding: 1rem;">
-          <div class="form-label">Cumulative Picks Today</div>
-          <div style="font-family: var(--font-mono); font-size: 1.8rem; font-weight: 700; color: #38bdf8;" id="totalPicksDisplay">1,517,412</div>
-          <div style="font-size: 0.75rem; color: var(--text-dim);">Across 6 operational weaving machines</div>
+
+        <div class="porsche-stat-card">
+          <div style="display: flex; gap: 0.9rem; align-items: center;">
+            <div class="porsche-icon-box" style="background:#f0f9ff; color:#0284c7;">
+              <span>🧵</span>
+            </div>
+            <div>
+              <div class="porsche-stat-label">Cumulative Picks</div>
+              <div class="porsche-stat-num" id="totalPicksDisplay">1,517,412</div>
+              <div class="porsche-stat-sub">Across 6 active looms</div>
+            </div>
+          </div>
         </div>
-        <div class="glass-panel" style="padding: 1rem;">
-          <div class="form-label">Power Demand</div>
-          <div style="font-family: var(--font-mono); font-size: 1.8rem; font-weight: 700; color: #fbbf24;" id="totalPowerAmps">103.5 A</div>
-          <div style="font-size: 0.75rem; color: var(--text-dim);">Active shop floor current draw</div>
+
+        <div class="porsche-stat-card">
+          <div style="display: flex; gap: 0.9rem; align-items: center;">
+            <div class="porsche-icon-box amber">
+              <span>🔌</span>
+            </div>
+            <div>
+              <div class="porsche-stat-label">Power Demand</div>
+              <div class="porsche-stat-num" id="totalPowerAmps" style="color:#d97706;">103.5 A</div>
+              <div class="porsche-stat-sub">Active floor draw</div>
+            </div>
+          </div>
         </div>
-        <div class="glass-panel" style="padding: 1rem;">
-          <div class="form-label">Idle Capacity Alerts</div>
-          <div style="font-family: var(--font-display); font-size: 1.8rem; font-weight: 800; color: #f87171;" id="idleAlertsCount">1 Machine</div>
-          <div style="font-size: 0.75rem; color: var(--text-dim);">Unmonitored idle > 120 seconds</div>
+
+        <div class="porsche-stat-card">
+          <div style="display: flex; gap: 0.9rem; align-items: center;">
+            <div class="porsche-icon-box red">
+              <span>⚠️</span>
+            </div>
+            <div>
+              <div class="porsche-stat-label">Idle Capacity</div>
+              <div class="porsche-stat-num" id="idleAlertsCount" style="color:#e11d48;">1 Machine</div>
+              <div class="porsche-stat-sub">> 120s threshold</div>
+            </div>
+          </div>
         </div>
       </div>
 
