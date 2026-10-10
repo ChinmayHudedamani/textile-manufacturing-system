@@ -167,7 +167,13 @@
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
           Finance & Costing
         </button>
+        <button class="nav-tab" data-scene="scene-arch">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+          Architecture & IPC
+          <span class="nav-badge new" style="margin-left:auto;">C++ / 2PL</span>
+        </button>
       </nav>
+
 
       <div class="side-footer">
         <div class="live-dot">
@@ -259,8 +265,116 @@
         </div>
       </div>
 
-      <!-- Overall Equipment Effectiveness (OEE) Porsche Metric Strip -->
+      <!-- SOLORA STYLE REAL-TIME ENERGY FLOW & POWER INFRASTRUCTURE HERO -->
+      <div class="grid-2" style="margin-bottom: 2rem; gap: 1.5rem;">
+        <!-- Left Hero: Solora Energy Distribution Flow Node -->
+        <div style="background: linear-gradient(135deg, #0b1322 0%, #112038 100%); border: 1px solid #1f2d44; border-radius: 12px; padding: 1.75rem; color: #fff; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(11, 19, 34, 0.4);">
+          <div style="position: absolute; right: -40px; top: -40px; width: 180px; height: 180px; border-radius: 50%; background: radial-gradient(circle, rgba(14, 165, 233, 0.15) 0%, transparent 70%); pointer-events: none;"></div>
+          
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem;">
+            <div>
+              <div style="font-family: var(--font-mono); font-size: 0.72rem; color: #38bdf8; letter-spacing: 0.14em; text-transform: uppercase;">SOLORA POWER MESH ARCHITECTURE</div>
+              <h3 style="font-family: var(--font-display); font-size: 1.45rem; font-weight: 700; margin: 4px 0 0 0; color: #f8fafc;">Mill Substation & Microgrid Flow</h3>
+            </div>
+            <span class="pill-green" style="font-size: 0.68rem; padding: 3px 8px;">SMART MODE ACTIVE</span>
+          </div>
+
+          <!-- Flow Diagram Nodes -->
+          <div style="display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; gap: 10px; align-items: center; margin: 1.5rem 0; text-align: center;">
+            <!-- Source 1: Solar Rooftop -->
+            <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 12px 8px;">
+              <div style="font-size: 1.4rem; margin-bottom: 4px;">☀️</div>
+              <div style="font-size: 0.7rem; color: #94a3b8; font-family: var(--font-mono);">SOLAR ROOF</div>
+              <div style="font-family: var(--font-display); font-size: 1.15rem; font-weight: 700; color: #f59e0b;" id="solarGenerationVal">42.8 kW</div>
+              <div style="font-size: 0.65rem; color: #10b981;">↑ Clean yield</div>
+            </div>
+
+            <!-- Flow Pulse 1 -->
+            <div style="font-size: 1.1rem; color: #38bdf8; animation: pulse-ring 1.5s infinite;">➔</div>
+
+            <!-- Node 2: Main Mill Substation Inverter -->
+            <div style="background: rgba(14, 165, 233, 0.12); border: 1px solid #0ea5e9; border-radius: 8px; padding: 14px 10px; box-shadow: 0 0 20px rgba(14, 165, 233, 0.2);">
+              <div style="font-size: 1.4rem; margin-bottom: 4px;">⚡</div>
+              <div style="font-size: 0.72rem; color: #bae6fd; font-family: var(--font-mono);">SUBSTATION</div>
+              <div style="font-family: var(--font-display); font-size: 1.25rem; font-weight: 800; color: #fff;" id="substationFlowVal">103.5 A</div>
+              <div style="font-size: 0.65rem; color: #38bdf8;">Harmonic: 0.98 PF</div>
+            </div>
+
+            <!-- Flow Pulse 2 -->
+            <div style="font-size: 1.1rem; color: #10b981; animation: pulse-ring 1.5s infinite;">➔</div>
+
+            <!-- Node 3: Active Weaving Shed -->
+            <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 12px 8px;">
+              <div style="font-size: 1.4rem; margin-bottom: 4px;">🏭</div>
+              <div style="font-size: 0.7rem; color: #94a3b8; font-family: var(--font-mono);">WEAVING SHED</div>
+              <div style="font-family: var(--font-display); font-size: 1.15rem; font-weight: 700; color: #10b981;">6 Looms</div>
+              <div style="font-size: 0.65rem; color: #94a3b8;">740 RPM target</div>
+            </div>
+          </div>
+
+          <!-- Bottom Microgrid Status Metrics -->
+          <div style="display: flex; justify-content: space-between; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 12px; font-size: 0.75rem; color: #94a3b8; font-family: var(--font-mono);">
+            <span>BATTERY BACKUP: <strong style="color: #10b981;">94% (4.2 hrs)</strong></span>
+            <span>GRID OFFSET: <strong style="color: #38bdf8;">61.4% Solar</strong></span>
+            <span>CO₂ SAVINGS: <strong style="color: #f59e0b;">2.8 Tons / day</strong></span>
+          </div>
+        </div>
+
+        <!-- Right Hero: Solora Energy Analytics & Efficiency Breakdown -->
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.75rem; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03); display: flex; flex-direction: column; justify-content: space-between;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+            <div>
+              <div style="font-family: var(--font-mono); font-size: 0.72rem; color: #64748b; letter-spacing: 0.1em; text-transform: uppercase;">ENERGY CONSUMPTION ANALYTICS</div>
+              <h3 style="font-family: var(--font-display); font-size: 1.35rem; font-weight: 700; margin: 2px 0 0 0; color: #0f172a;">Specific Energy Consumption (SEC)</h3>
+            </div>
+            <span style="font-family: var(--font-mono); font-size: 1.25rem; font-weight: 800; color: #059669;">1.12 kWh / m</span>
+          </div>
+
+          <!-- Energy Consumption Progress Bars -->
+          <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 1.25rem;">
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-family: var(--font-mono); margin-bottom: 4px;">
+                <span>Weaving Motors (Airjet Main Drives)</span>
+                <strong>68.4 kW (66%)</strong>
+              </div>
+              <div style="background: #f1f5f9; height: 8px; border-radius: 4px; overflow: hidden;">
+                <div style="background: #0ea5e9; height: 100%; width: 66%;"></div>
+              </div>
+            </div>
+
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-family: var(--font-mono); margin-bottom: 4px;">
+                <span>Spinning Ring Frames & Spindles</span>
+                <strong>24.5 kW (24%)</strong>
+              </div>
+              <div style="background: #f1f5f9; height: 8px; border-radius: 4px; overflow: hidden;">
+                <div style="background: #10b981; height: 100%; width: 24%;"></div>
+              </div>
+            </div>
+
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-family: var(--font-mono); margin-bottom: 4px;">
+                <span>Dyeing Vats & Thermal Heating</span>
+                <strong>10.6 kW (10%)</strong>
+              </div>
+              <div style="background: #f1f5f9; height: 8px; border-radius: 4px; overflow: hidden;">
+                <div style="background: #f59e0b; height: 100%; width: 10%;"></div>
+              </div>
+            </div>
+          </div>
+
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem;">
+            <span>Calculated Shift Power Cost: <strong style="color: #0f172a;">$142.80 / hr</strong></span>
+            <button class="btn btn-ghost" style="padding: 3px 8px; font-size: 0.72rem; border-color: #cbd5e1;" onclick="openItemPassport('ord-zara-081')">
+              Energy Spec Audit ➔
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Overall Equipment Effectiveness (OEE) Metric Strip -->
       <div class="grid-4" style="margin-bottom: 2rem;">
+
         <div class="porsche-stat-card">
           <div style="display: flex; gap: 0.9rem; align-items: center;">
             <div class="porsche-icon-box green">
@@ -897,6 +1011,130 @@
         <div class="waterfall-bar-container" id="waterfallContainer"></div>
       </div>
     </section>
+
+    <!-- ===================================================================
+         SCENE 7: ARCHITECTURE & IPC DUAL-LOOP DIAGNOSTICS (HACKATHON DEEP DIVE)
+         =================================================================== -->
+    <section id="scene-arch" class="scene-view">
+      <div class="scene-header">
+        <div class="scene-title">
+          <h2>Heterogeneous System Architecture & IPC Telemetry Engine</h2>
+          <p>Two-loop execution: C++20 zero-allocation edge sampling (50ms) ➔ MQTT Broker (QoS 1) ➔ FastAPI AsyncPG state machine ➔ Offline-first PWA</p>
+        </div>
+      </div>
+
+      <!-- Two Loops Pipeline Visualizer -->
+      <div class="grid-2" style="margin-bottom: 1.5rem; gap: 1.5rem;">
+        <!-- Left: Physical Fast Loop -->
+        <div class="glass-panel" style="border-left: 4px solid #0284c7;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <div style="font-family: var(--font-mono); font-size: 0.75rem; color: #0284c7; font-weight: 700; letter-spacing: 0.1em;">
+              FAST EDGE LOOP · MICROSECONDS TO MILLISECONDS
+            </div>
+            <span class="pill-green" style="font-size: 0.65rem;">ZERO HEAP ALLOCATION</span>
+          </div>
+          <h3 style="font-family: var(--font-display); font-size: 1.25rem; color: #0f172a; margin-bottom: 0.5rem;">C++20 Modbus & Optical Pick Daemon</h3>
+          <p style="font-size: 0.82rem; color: #64748b; line-height: 1.6; margin-bottom: 1rem;">
+            Direct GPIO interrupt polling on STM32 / Compute Modules. Bypasses garbage-collected runtimes to prevent sensor pulse drift under 12,000 RPM spindle speeds.
+          </p>
+
+          <div class="textile-subgrid" style="margin-bottom: 1rem;">
+            <div class="t-cell"><span class="t-lbl">CADENCE</span><span class="t-val mono">50ms Sampling</span></div>
+            <div class="t-cell"><span class="t-lbl">TRANSPORT</span><span class="t-val mono">MQTT QoS 1</span></div>
+            <div class="t-cell"><span class="t-lbl">PAYLOAD</span><span class="t-val mono">Sparkplug B</span></div>
+            <div class="t-cell"><span class="t-lbl">FAILSAFE</span><span class="t-val mono">LWT (2s Heartbeat)</span></div>
+          </div>
+
+          <div style="background: #0b1322; color: #94a3b8; border-radius: 6px; padding: 0.85rem; font-family: var(--font-mono); font-size: 0.72rem; line-height: 1.5;">
+            <div style="color: #38bdf8;">// edge_telemetry.cpp: Atomic counter integration</div>
+            <div>P(t) = P(0) + integral( f_pick(t) dt )</div>
+            <div style="color: #4ade80;">RingBuffer::write(TelemetryPacket{ .picks_cum = 1517412, .irms = 15.42 });</div>
+          </div>
+        </div>
+
+        <!-- Right: Transactional Slow Loop -->
+        <div class="glass-panel" style="border-left: 4px solid #f59e0b;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <div style="font-family: var(--font-mono); font-size: 0.75rem; color: #f59e0b; font-weight: 700; letter-spacing: 0.1em;">
+              TRANSACTIONAL SLOW LOOP · SECONDS TO MINUTES
+            </div>
+            <span class="pill-amber" style="font-size: 0.65rem;">ACID ROW-LEVEL ISOLATION</span>
+          </div>
+          <h3 style="font-family: var(--font-display); font-size: 1.25rem; color: #0f172a; margin-bottom: 0.5rem;">FastAPI AsyncPG & PostgreSQL Engine</h3>
+          <p style="font-size: 0.82rem; color: #64748b; line-height: 1.6; margin-bottom: 1rem;">
+            Guarantees strict atomicity and financial consistency. Explicit row-level locks prevent dual-truck pallet double-dispatch across simultaneous scanner trigger events.
+          </p>
+
+          <div class="textile-subgrid" style="margin-bottom: 1rem;">
+            <div class="t-cell"><span class="t-lbl">CONCURRENCY</span><span class="t-val mono">SELECT FOR UPDATE</span></div>
+            <div class="t-cell"><span class="t-lbl">INTEGRITY</span><span class="t-val mono">ON DELETE RESTRICT</span></div>
+            <div class="t-cell"><span class="t-lbl">COSTING</span><span class="t-val mono">Kaplan ABC Formula</span></div>
+            <div class="t-cell"><span class="t-lbl">PRECISION</span><span class="t-val mono">Decimal (Zero Drift)</span></div>
+          </div>
+
+          <div style="background: #0b1322; color: #94a3b8; border-radius: 6px; padding: 0.85rem; font-family: var(--font-mono); font-size: 0.72rem; line-height: 1.5;">
+            <div style="color: #f59e0b;"># main.py: Atomic Anti-Double Dispatch Lock</div>
+            <div style="color: #cbd5e1;">stmt = select(FabricRoll).where(roll_barcode == b).with_for_update()</div>
+            <div style="color: #ef4444;">if existing_dispatch: raise HTTPException(409, "Double Dispatch Blocked")</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Stream Diagnostics & Event Bus Feed -->
+      <div class="grid-2" style="gap: 1.5rem;">
+        <!-- IPC Ingestion Benchmark -->
+        <div class="glass-panel">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h3 style="font-family: var(--font-display); font-size: 1.15rem; margin: 0;">Edge IPC Channel Telemetry</h3>
+            <span class="status-badge RUNNING" id="ipcStatusBadge">SOCKET LISTENING</span>
+          </div>
+
+          <div class="telemetry-metrics-grid" style="margin-bottom: 1rem;">
+            <div class="metric-item">
+              <span class="metric-label">IPC Ingestion Rate</span>
+              <span class="metric-val green" id="ipcIngestRate">20 Hz (50ms)</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Transport Latency</span>
+              <span class="metric-val cyan" id="ipcLatencyVal">&lt; 1.4 ms</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Packet Loss (QoS 1)</span>
+              <span class="metric-val">0.00%</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Buffer Capacity</span>
+              <span class="metric-val">1024 / 1024 (0% drop)</span>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-primary" id="btnTestIpcTick" style="font-size: 0.75rem;">
+              ⚡ Trigger IPC Stress Burst (100 Packets)
+            </button>
+            <button class="btn btn-ghost" id="btnFlushRedisCache" style="font-size: 0.75rem;">
+              🔄 Synchronize Core Postgres State
+            </button>
+          </div>
+        </div>
+
+        <!-- Real-Time Cryptographic Event Feed -->
+        <div class="glass-panel">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <h3 style="font-family: var(--font-display); font-size: 1.15rem; margin: 0;">Immutable Cryptographic Audit Stream</h3>
+            <span style="font-family: var(--font-mono); font-size: 0.7rem; color: #64748b;">SHA-256 LEDGER</span>
+          </div>
+          <p style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.75rem;">
+            Every gate weigh-in, QC verdict, and truck manifest commit produces an immutable cryptographic signature.
+          </p>
+
+          <div id="archEventStream" style="display: flex; flex-direction: column; gap: 6px; max-height: 230px; overflow-y: auto; font-family: var(--font-mono); font-size: 0.72rem;">
+            <!-- Real-time events injected here dynamically -->
+          </div>
+        </div>
+      </div>
+    </section>
+
 
       </main> <!-- /main-viewport -->
     </div> <!-- /main-shell -->

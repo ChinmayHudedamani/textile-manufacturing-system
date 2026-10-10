@@ -414,6 +414,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         } else if (sceneId === "scene-financial") {
             const ordId = document.getElementById("costingOrderSelect").value || "ord-zara-081";
             renderFinancialRollup(ordId);
+        } else if (sceneId === "scene-arch") {
+            renderArchitectureScene();
         }
     }
 
@@ -465,6 +467,20 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.getElementById("totalPicksDisplay").textContent = totalPicks.toLocaleString();
         document.getElementById("totalPowerAmps").textContent = `${totalAmps.toFixed(1)} A`;
         document.getElementById("idleAlertsCount").textContent = `${idleAlerts} Machine${idleAlerts === 1 ? '' : 's'}`;
+
+        // Dynamically modulate Solora Energy System Nodes
+        const solarElem = document.getElementById("solarGenerationVal");
+        const substationElem = document.getElementById("substationFlowVal");
+        if (solarElem) {
+            // Solar modulated by time of day: peak at midday, lower in evening
+            const hrs = (store.simSecondsOfDay / 3600);
+            let solarFactor = Math.max(0, Math.sin(((hrs - 6) / 13) * Math.PI));
+            const liveSolarKw = (42.8 * (0.85 + 0.3 * solarFactor) + (Math.sin(Date.now() / 4000) * 1.2)).toFixed(1);
+            solarElem.textContent = `${liveSolarKw} kW`;
+        }
+        if (substationElem) {
+            substationElem.textContent = `${totalAmps.toFixed(1)} A`;
+        }
 
         // Draw real-time sparkline waveforms for each machine
         store.state.machines.forEach(m => {
@@ -1259,4 +1275,96 @@ document.addEventListener("DOMContentLoaded", async () => {
         soundManager.playClick();
         renderFinancialRollup(e.target.value);
     });
+
+    // =================================================================
+    // SCENE 7: ARCHITECTURE & IPC DUAL-LOOP DIAGNOSTICS
+    // =================================================================
+    const sampleAuditLogs = [
+        { time: "Just now", type: "IPC_BURST", hash: "4f8a9e2d...", desc: "C++ RingBuffer ➔ MQTT QoS 1: 50ms steady-state tick ingested" },
+        { time: "1m ago", type: "2PL_LOCK", hash: "e9a04f1c...", desc: "Row lock held on FabricRoll (ROLL-094-PASS-01) ➔ Dispatch committed" },
+        { time: "3m ago", type: "ABC_MARGIN", hash: "b2c3d4e5...", desc: "Activity-Based Costing recalculated for ORD-2026-081 (Passed: 3,450m)" },
+        { time: "5m ago", type: "SAFETY_CHK", hash: "987a6b5c...", desc: "DB Constraint Check (current_stock_kg >= 0): Stock atomic decrement" },
+        { time: "8m ago", type: "QC_VERDICT", hash: "a1b2c3d4...", desc: "ASTM D5430 inspection logged with ON DELETE RESTRICT foreign keys" }
+    ];
+
+    function renderArchitectureScene() {
+        const stream = document.getElementById("archEventStream");
+        if (!stream) return;
+        stream.innerHTML = "";
+
+        sampleAuditLogs.forEach(log => {
+            const row = document.createElement("div");
+            row.style.display = "flex";
+            row.style.justifyContent = "space-between";
+            row.style.alignItems = "center";
+            row.style.padding = "6px 10px";
+            row.style.background = "#0b1322";
+            row.style.borderRadius = "4px";
+            row.style.border = "1px solid #1f2d44";
+
+            let color = "#38bdf8";
+            if (log.type === "2PL_LOCK") color = "#f59e0b";
+            if (log.type === "ABC_MARGIN") color = "#10b981";
+            if (log.type === "SAFETY_CHK") color = "#ec4899";
+
+            row.innerHTML = `
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <span style="color: ${color}; font-weight: 700;">[${log.type}]</span>
+                    <span style="color: #cbd5e1;">${log.desc}</span>
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <span style="color: #64748b;">${log.hash}</span>
+                    <span style="color: #94a3b8; font-size: 0.65rem;">${log.time}</span>
+                </div>
+            `;
+            stream.appendChild(row);
+        });
+    }
+
+    const btnTestIpcTick = document.getElementById("btnTestIpcTick");
+    if (btnTestIpcTick) {
+        btnTestIpcTick.addEventListener("click", async () => {
+            soundManager.playClick();
+            btnTestIpcTick.textContent = "⚡ Ingesting 100 Packets...";
+            const ingestRate = document.getElementById("ipcIngestRate");
+            const latency = document.getElementById("ipcLatencyVal");
+            if (ingestRate) ingestRate.textContent = "100 Hz (10ms)";
+            if (latency) latency.textContent = "< 0.8 ms";
+
+            await store.tickTelemetry();
+
+            sampleAuditLogs.unshift({
+                time: "Just now",
+                type: "IPC_BURST",
+                hash: Math.random().toString(16).substring(2, 10) + "...",
+                desc: "High-frequency C++ edge burst (100 packets) written to Redis ring buffer"
+            });
+            renderArchitectureScene();
+
+            setTimeout(() => {
+                btnTestIpcTick.textContent = "⚡ Trigger IPC Stress Burst (100 Packets)";
+                if (ingestRate) ingestRate.textContent = "20 Hz (50ms)";
+                if (latency) latency.textContent = "< 1.4 ms";
+            }, 1500);
+        });
+    }
+
+    const btnFlushRedisCache = document.getElementById("btnFlushRedisCache");
+    if (btnFlushRedisCache) {
+        btnFlushRedisCache.addEventListener("click", async () => {
+            soundManager.playSuccessChime();
+            btnFlushRedisCache.textContent = "🔄 Synchronizing...";
+            await store.syncAllBackendData();
+            sampleAuditLogs.unshift({
+                time: "Just now",
+                type: "CORE_SYNC",
+                hash: Math.random().toString(16).substring(2, 10) + "...",
+                desc: "PostgreSQL async transaction batch sync committed across all 6 tables"
+            });
+            renderArchitectureScene();
+            setTimeout(() => {
+                btnFlushRedisCache.textContent = "🔄 Synchronize Core Postgres State";
+            }, 1000);
+        });
+    }
 });

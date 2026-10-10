@@ -574,16 +574,13 @@ class ETMSStore {
         this.listeners.forEach(fn => fn(this.state));
     }
 
-    // Health check against Python FastAPI backend
+    // Full live synchronization against Python FastAPI backend endpoints
     async checkBackendHealth() {
         try {
-            const res = await fetch(`${API_BASE}/machines`, { signal: AbortSignal.timeout(1500) });
+            const res = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(1800) });
             if (res.ok) {
                 this.isBackendOnline = true;
-                // Sync latest machines
-                const machines = await res.json();
-                this.state.machines = machines;
-                this.saveLocalState();
+                await this.syncAllBackendData();
                 return true;
             }
         } catch (e) {
@@ -591,6 +588,31 @@ class ETMSStore {
         }
         return false;
     }
+
+    async syncAllBackendData() {
+        if (!this.isBackendOnline) return;
+        try {
+            // Concurrent fetch of all mill operational tables
+            const [mRes, bRes, rRes, oRes] = await Promise.all([
+                fetch(`${API_BASE}/machines`),
+                fetch(`${API_BASE}/inventory/batches`),
+                fetch(`${API_BASE}/quality/rolls`),
+                fetch(`${API_BASE}/orders`)
+            ]);
+
+            if (mRes.ok) this.state.machines = await mRes.json();
+            if (bRes.ok) this.state.batches = await bRes.json();
+            if (rRes.ok) this.state.rolls = await rRes.json();
+            if (oRes.ok) this.state.orders = await oRes.json();
+
+            this.initTelemetryHistory();
+            this.saveLocalState();
+            this.notify();
+        } catch (err) {
+            console.warn("[ETMS SYNC WARNING]:", err);
+        }
+    }
+
 
     // 1. Scene 1: Gate Inward
     async addInwardYarn(payload) {
