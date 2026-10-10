@@ -228,6 +228,119 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     });
 
+    // 3e. Factory Master Simulation Bar & Live Time Engine
+    const simClockTime = document.getElementById("simClockTime");
+    const simShiftBadge = document.getElementById("simShiftBadge");
+    const toggleSimPlayBtn = document.getElementById("toggleSimPlayBtn");
+    const injectWeftBreakBtn = document.getElementById("injectWeftBreakBtn");
+    const simSpeedDials = document.querySelectorAll("#simSpeedDials button");
+
+    if (simSpeedDials) {
+        simSpeedDials.forEach(btn => {
+            btn.addEventListener("click", () => {
+                soundManager.playClick();
+                simSpeedDials.forEach(b => {
+                    b.classList.remove("active");
+                    b.style.background = "transparent";
+                    b.style.color = "#0f172a";
+                });
+                btn.classList.add("active");
+                btn.style.background = "#0f172a";
+                btn.style.color = "#ffffff";
+                const speed = parseInt(btn.dataset.speed, 10) || 1;
+                store.setSimulationSpeed(speed);
+            });
+        });
+    }
+
+    if (toggleSimPlayBtn) {
+        toggleSimPlayBtn.addEventListener("click", () => {
+            soundManager.playClick();
+            store.toggleSimulationPlayback();
+            if (store.isSimulationRunning) {
+                toggleSimPlayBtn.textContent = "⏸ Pause";
+                toggleSimPlayBtn.classList.remove("btn-primary");
+                toggleSimPlayBtn.classList.add("btn-ghost");
+            } else {
+                toggleSimPlayBtn.textContent = "▶ Resume";
+                toggleSimPlayBtn.classList.add("btn-primary");
+                toggleSimPlayBtn.classList.remove("btn-ghost");
+            }
+        });
+    }
+
+    if (injectWeftBreakBtn) {
+        injectWeftBreakBtn.addEventListener("click", () => {
+            soundManager.playAlarmBuzzer();
+            store.triggerMachineFault("WEAVE-LOOM-01", "WEFT_BREAK");
+            // Also notify user with alert animation
+            injectWeftBreakBtn.textContent = "💥 FAULT INJECTED (LOOM 01)";
+            injectWeftBreakBtn.style.background = "#ffe4e6";
+            setTimeout(() => {
+                injectWeftBreakBtn.textContent = "⚠️ Inject Weft Break (Loom 01)";
+                injectWeftBreakBtn.style.background = "transparent";
+            }, 3000);
+        });
+    }
+
+    // 3f. Real-Time Machine Tuning Modal Controller
+    const machineTuningModal = document.getElementById("machineTuningModal");
+    const closeTuneModalBtn = document.getElementById("closeTuneModalBtn");
+    const cancelTuneBtn = document.getElementById("cancelTuneBtn");
+    const machineTuningForm = document.getElementById("machineTuningForm");
+
+    window.openMachineTuning = (machineId) => {
+        soundManager.playClick();
+        const m = store.state.machines.find(x => x.machine_id === machineId);
+        if (!m || !machineTuningModal) return;
+
+        document.getElementById("tuneMachineId").value = m.machine_id;
+        document.getElementById("tuneMachineTitle").textContent = `${m.machine_id} Live Tuning`;
+        document.getElementById("tuneStatusSelect").value = m.current_status;
+        document.getElementById("tuneRpmInput").value = m.current_rpm || (m.rated_capacity_rpm > 1000 ? 11800 : 740);
+        document.getElementById("tuneTensionInput").value = m.warp_tension_cn || 180;
+        document.getElementById("tuneAmpsInput").value = m.current_power_draw_amps || 15.4;
+        document.getElementById("tuneOrderIdInput").value = m.assigned_order_id || "ord-zara-081";
+        document.getElementById("tuneOverheadInput").value = m.overhead_hourly_rate || 18.50;
+
+        machineTuningModal.style.display = "flex";
+    };
+
+    if (closeTuneModalBtn && machineTuningModal) {
+        closeTuneModalBtn.addEventListener("click", () => {
+            machineTuningModal.style.display = "none";
+        });
+        cancelTuneBtn.addEventListener("click", () => {
+            machineTuningModal.style.display = "none";
+        });
+
+        machineTuningForm.addEventListener("submit", (e) => {
+            e.preventDefault();
+            soundManager.playSuccessChime();
+            const machineId = document.getElementById("tuneMachineId").value;
+            const newStatus = document.getElementById("tuneStatusSelect").value;
+            const newRpm = parseInt(document.getElementById("tuneRpmInput").value, 10) || 0;
+            const newTension = parseInt(document.getElementById("tuneTensionInput").value, 10) || 180;
+            const newAmps = parseFloat(document.getElementById("tuneAmpsInput").value) || 15.4;
+            const newOrder = document.getElementById("tuneOrderIdInput").value.trim() || null;
+            const newOverhead = parseFloat(document.getElementById("tuneOverheadInput").value) || 18.50;
+
+            store.updateMachineConfiguration(machineId, {
+                current_status: newStatus,
+                current_rpm: newRpm,
+                warp_tension_cn: newTension,
+                current_power_draw_amps: newAmps,
+                assigned_order_id: newOrder,
+                overhead_hourly_rate: newOverhead,
+                idle_seconds: newStatus === "RUNNING" ? 0 : 30,
+                is_idle_alert: newStatus !== "RUNNING"
+            });
+
+            machineTuningModal.style.display = "none";
+            store.notify();
+        });
+    }
+
     // 4. Initial Render of All Modules
     renderFloorHUD();
     renderGateInward();
@@ -239,11 +352,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Subscribe to state changes
     store.subscribe(() => {
         updateHUDStatus();
+        updateSimulationClock();
         const activeTab = document.querySelector(".nav-tab.active");
         if (activeTab) {
             renderActiveScene(activeTab.dataset.scene);
         }
     });
+
+    function updateSimulationClock() {
+        if (!simClockTime || !simShiftBadge) return;
+        const clockData = store.getSimulationTimeFormatted();
+        simClockTime.textContent = clockData.timeStr;
+        simShiftBadge.textContent = clockData.shiftName;
+    }
+
 
     function renderActiveScene(sceneId) {
         if (sceneId === "scene-floor") renderFloorHUD();
@@ -307,7 +429,57 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.getElementById("totalPicksDisplay").textContent = totalPicks.toLocaleString();
         document.getElementById("totalPowerAmps").textContent = `${totalAmps.toFixed(1)} A`;
         document.getElementById("idleAlertsCount").textContent = `${idleAlerts} Machine${idleAlerts === 1 ? '' : 's'}`;
+
+        // Draw real-time sparkline waveforms for each machine
+        store.state.machines.forEach(m => {
+            drawMachineSparkline(m.machine_id, m.current_status);
+        });
     }
+
+    function drawMachineSparkline(machineId, status) {
+        const canvas = document.getElementById(`sparkline_${machineId}`);
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        const w = canvas.width;
+        const h = canvas.height;
+        ctx.clearRect(0, 0, w, h);
+
+        const history = store.telemetryHistory[machineId] || [];
+        if (history.length < 2) return;
+
+        // Base line
+        ctx.beginPath();
+        ctx.strokeStyle = status === "RUNNING" ? "#0284c7" : "#cbd5e1";
+        ctx.lineWidth = 1.75;
+        ctx.lineJoin = "round";
+
+        const points = history.map(pt => pt.rpm);
+        const minVal = Math.min(...points) * 0.95;
+        const maxVal = Math.max(...points) * 1.05 || 1;
+        const range = (maxVal - minVal) || 1;
+
+        const stepX = w / (points.length - 1);
+        points.forEach((val, i) => {
+            const x = i * stepX;
+            const normY = status === "RUNNING" ? (val - minVal) / range : 0.5;
+            const y = h - (normY * (h - 6) + 3);
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+
+        // Pulsing tip at end of waveform
+        if (status === "RUNNING") {
+            const lastVal = points[points.length - 1];
+            const normY = (lastVal - minVal) / range;
+            const lastY = h - (normY * (h - 6) + 3);
+            ctx.fillStyle = "#0284c7";
+            ctx.beginPath();
+            ctx.arc(w - 2, lastY, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
 
     function createMachineCard(m) {
         const div = document.createElement("div");
@@ -383,19 +555,29 @@ document.addEventListener("DOMContentLoaded", async () => {
                 </div>
             </div>
 
+            <!-- Live 30-Second Rolling Waveform Sparkline -->
+            <div style="margin: 0.5rem 0 0.25rem 0; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px 8px; display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 0.65rem; font-family: var(--font-mono); color: #64748b; font-weight: 600;">LIVE OSCILLATION (RPM / cN)</span>
+                <canvas id="sparkline_${m.machine_id}" width="140" height="24" style="display: block;"></canvas>
+            </div>
+
             ${specRows}
 
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid #f1f5f9;">
                 <span style="font-size: 0.72rem; color: #64748b; font-family: var(--font-mono);">Overhead: $${m.overhead_hourly_rate.toFixed(2)}/hr</span>
                 <div style="display: flex; gap: 6px;">
-                    <button class="btn btn-ghost" style="padding: 0.25rem 0.65rem; font-size: 0.7rem; border-radius: 4px;" onclick="openItemPassport('${m.assigned_order_id || 'ord-zara-081'}')">
-                        📋 Item Passport
+                    <button class="btn btn-ghost" style="padding: 0.25rem 0.55rem; font-size: 0.7rem; border-radius: 4px; border-color: #cbd5e1;" onclick="openMachineTuning('${m.machine_id}')" title="Dynamically tune RPM, load, and tension">
+                        ⚙️ Tune
                     </button>
-                    <button class="btn btn-ghost" style="padding: 0.25rem 0.65rem; font-size: 0.7rem; border-radius: 4px;" onclick="toggleMachine('${m.machine_id}')">
+                    <button class="btn btn-ghost" style="padding: 0.25rem 0.55rem; font-size: 0.7rem; border-radius: 4px;" onclick="openItemPassport('${m.assigned_order_id || 'ord-zara-081'}')">
+                        📋 Specs
+                    </button>
+                    <button class="btn btn-ghost" style="padding: 0.25rem 0.55rem; font-size: 0.7rem; border-radius: 4px;" onclick="toggleMachine('${m.machine_id}')">
                         ${m.current_status === 'RUNNING' ? 'Pause' : 'Start'}
                     </button>
                 </div>
             </div>
+
         `;
         return div;
     }
@@ -718,6 +900,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.getElementById("qcDefectTypeSelect").value = roll.defect_type || "NONE";
         document.getElementById("qcDefectPointsInput").value = roll.defect_points || 0;
 
+        // Render Linear Defect Coordinate Markers (ASTM D5430 Map)
+        renderLinearRollDefects(roll);
+
         // Render Upstream Lineage
         const trace = store.getUpstreamLineage(roll.roll_barcode);
         if (trace) {
@@ -733,11 +918,77 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     }
 
+    function renderLinearRollDefects(roll) {
+        const markersContainer = document.getElementById("rollDefectMarkers");
+        const coordLabel = document.getElementById("defectCoordinateLabel");
+        if (!markersContainer) return;
+        markersContainer.innerHTML = "";
+
+        // If roll has no defects or points, show clean badge
+        if (!roll.defect_type || roll.defect_type === "NONE") {
+            if (coordLabel) coordLabel.textContent = "Clean Fabric Roll (0 Defects)";
+            return;
+        }
+
+        // Plot realistic coordinate positions along roll length
+        const rollLen = roll.length_meters || 135;
+        // Default coordinate at ~ 42% or stored coordinate
+        const coordMeters = roll.defect_meter_coordinate || (roll.defect_points > 10 ? 82.5 : 44.0);
+        const pct = Math.min(98, Math.max(2, (coordMeters / rollLen) * 100));
+
+        const marker = document.createElement("div");
+        marker.style.position = "absolute";
+        marker.style.left = `${pct}%`;
+        marker.style.top = "2px";
+        marker.style.bottom = "2px";
+        marker.style.width = "8px";
+        marker.style.transform = "translateX(-50%)";
+        marker.style.background = roll.qc_status === "REJECTED" ? "#e11d48" : "#f59e0b";
+        marker.style.borderRadius = "3px";
+        marker.style.boxShadow = "0 0 6px rgba(225, 29, 72, 0.6)";
+        marker.title = `Defect: ${roll.defect_type} at ${coordMeters.toFixed(1)}m (${roll.defect_points} pts)`;
+        markersContainer.appendChild(marker);
+
+        if (coordLabel) {
+            coordLabel.textContent = `📍 ${roll.defect_type} detected at ${coordMeters.toFixed(1)}m / ${rollLen}m`;
+        }
+    }
+
+    // Click handler for user to interactively plot a defect coordinate on the roll bar
+    const linearRollBar = document.getElementById("linearRollBar");
+    if (linearRollBar) {
+        linearRollBar.addEventListener("click", (e) => {
+            soundManager.playClick();
+            const rect = linearRollBar.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const pct = Math.max(0, Math.min(1, clickX / rect.width));
+            const activeBarcode = document.getElementById("qcActiveBarcode").textContent;
+            const roll = store.state.rolls.find(r => r.roll_barcode.toUpperCase() === activeBarcode.toUpperCase());
+            if (!roll) return;
+
+            const rollLen = roll.length_meters || 135;
+            const clickedMeters = Number((pct * rollLen).toFixed(1));
+            roll.defect_meter_coordinate = clickedMeters;
+            
+            // If defect is NONE, auto-promote to UNEVEN_WEAVING
+            if (!roll.defect_type || roll.defect_type === "NONE") {
+                roll.defect_type = "UNEVEN_WEAVING";
+                roll.defect_points = 4;
+                document.getElementById("qcDefectTypeSelect").value = "UNEVEN_WEAVING";
+                document.getElementById("qcDefectPointsInput").value = 4;
+            }
+
+            renderLinearRollDefects(roll);
+            renderQCBench();
+        });
+    }
+
     window.setQcBarcode = (barcode) => {
         soundManager.playClick();
         document.getElementById("qcBarcodeScanInput").value = barcode;
         loadQCBarcodeData(barcode);
     };
+
 
     document.getElementById("loadRollForQcBtn").addEventListener("click", () => {
         soundManager.playClick();

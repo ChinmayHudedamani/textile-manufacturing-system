@@ -12,10 +12,144 @@ class ETMSStore {
         this.isBackendOnline = false;
         this.offlineQueue = JSON.parse(localStorage.getItem("etms_offline_queue") || "[]");
         
+        // Factory Simulation Engine Parameters
+        this.simSpeedMultiplier = 1; // 1x (Realtime), 10x, 60x (Shift Fast-forward)
+        this.isSimulationRunning = true;
+        this.simSecondsOfDay = 8 * 3600 + 14 * 60; // Starts at 08:14 AM (Morning Shift)
+        this.telemetryHistory = {}; // machine_id -> array of { time, rpm, power, tension }
+        
         // Initial Local State (used for offline or instant browser testing)
         this.state = this.loadLocalState();
         this.listeners = [];
-        this.pollingTimer = null;
+        this.initTelemetryHistory();
+        this.startContinuousSimulationEngine();
+    }
+
+    initTelemetryHistory() {
+        this.state.machines.forEach(m => {
+            if (!this.telemetryHistory[m.machine_id]) {
+                this.telemetryHistory[m.machine_id] = [];
+                for (let i = 20; i >= 0; i--) {
+                    this.telemetryHistory[m.machine_id].push({
+                        rpm: m.current_status === 'RUNNING' ? (m.current_rpm || 740) + (Math.random() * 10 - 5) : 0,
+                        amps: m.current_status === 'RUNNING' ? (m.current_power_draw_amps || 15.4) + (Math.random() * 0.4 - 0.2) : 1.8,
+                        tension: m.stage === 'WEAVING' && m.current_status === 'RUNNING' ? (m.warp_tension_cn || 180) + (Math.random() * 4 - 2) : 0
+                    });
+                }
+            }
+        });
+    }
+
+    startContinuousSimulationEngine() {
+        if (this.simTimer) clearInterval(this.simTimer);
+        this.simTimer = setInterval(() => {
+            if (this.isSimulationRunning) {
+                this.advanceSimulationStep();
+            }
+        }, 1000);
+    }
+
+    setSimulationSpeed(multiplier) {
+        this.simSpeedMultiplier = multiplier;
+        this.notify();
+    }
+
+    toggleSimulationPlayback() {
+        this.isSimulationRunning = !this.isSimulationRunning;
+        this.notify();
+    }
+
+    advanceSimulationStep() {
+        const stepSec = this.simSpeedMultiplier;
+        this.simSecondsOfDay = (this.simSecondsOfDay + stepSec) % 86400;
+
+        // Realistic Jitter & Stochastic Wear on active machines
+        this.state.machines.forEach(m => {
+            if (m.current_status === "RUNNING") {
+                const rpmJitter = (Math.random() * 6 - 3);
+                const baseRpm = m.rated_capacity_rpm > 1000 ? 11800 : 740;
+                m.current_rpm = Math.max(0, Math.round(baseRpm + rpmJitter));
+                
+                // Cumulative picks: (RPM / 60) * elapsed simulated seconds
+                const picksGained = Math.round((m.current_rpm / 60) * stepSec);
+                m.current_picks_cumulative += picksGained;
+                
+                // Power fluctuations with harmonic mechanical load
+                const loadNoise = (Math.sin(Date.now() / 3000) * 0.6) + (Math.random() * 0.3 - 0.15);
+                m.current_power_draw_amps = Number((15.4 + loadNoise).toFixed(2));
+                
+                // Warp tension sensor breathing
+                if (m.stage === "WEAVING") {
+                    m.warp_tension_cn = Math.round(180 + Math.sin(Date.now() / 2000) * 6 + (Math.random() * 2 - 1));
+                    m.weft_insertion_m_min = Math.round(m.current_rpm * (m.reed_width_cm / 100));
+                }
+
+                m.idle_seconds = 0;
+                m.is_idle_alert = false;
+            } else if (m.current_status === "IDLE") {
+                m.idle_seconds += stepSec;
+                m.is_idle_alert = (m.idle_seconds > 120);
+                m.current_rpm = 0;
+                m.current_power_draw_amps = 1.8;
+                if (m.stage === "WEAVING") m.warp_tension_cn = 0;
+            }
+
+            // Record to rolling telemetry waveform (max 30 historical samples)
+            if (!this.telemetryHistory[m.machine_id]) this.telemetryHistory[m.machine_id] = [];
+            this.telemetryHistory[m.machine_id].push({
+                rpm: m.current_rpm || 0,
+                amps: m.current_power_draw_amps || 1.8,
+                tension: m.warp_tension_cn || 0
+            });
+            if (this.telemetryHistory[m.machine_id].length > 30) {
+                this.telemetryHistory[m.machine_id].shift();
+            }
+        });
+
+        // Synchronize Zara Inditex order live completion
+        const zaraOrder = this.state.orders.find(o => o.order_id === "ord-zara-081");
+        if (zaraOrder) {
+            // ~ 1 meter every 2,850 picks (28.5 picks/cm * 100 cm/m)
+            const loom1 = this.state.machines.find(m => m.machine_id === "WEAVE-LOOM-01");
+            const loom4 = this.state.machines.find(m => m.machine_id === "WEAVE-LOOM-04");
+            const runningLoomPicks = ((loom1 && loom1.current_status === "RUNNING" ? 12 : 0) + (loom4 && loom4.current_status === "RUNNING" ? 12 : 0)) * stepSec;
+            const metersAdded = runningLoomPicks / 2850;
+            zaraOrder.passed_meters = Number((zaraOrder.passed_meters + metersAdded).toFixed(1));
+            zaraOrder.completion_percentage = Math.min(100, Number(((zaraOrder.passed_meters / zaraOrder.target_meters) * 100).toFixed(1)));
+        }
+
+        this.notify();
+    }
+
+    getSimulationTimeFormatted() {
+        const hrs = Math.floor(this.simSecondsOfDay / 3600);
+        const mins = Math.floor((this.simSecondsOfDay % 3600) / 60);
+        const secs = this.simSecondsOfDay % 60;
+        const pad = (n) => String(n).padStart(2, '0');
+        const shift = hrs >= 6 && hrs < 14 ? "SHIFT A (MORNING)" : (hrs >= 14 && hrs < 22 ? "SHIFT B (AFTERNOON)" : "SHIFT C (NIGHT)");
+        return {
+            timeStr: `${pad(hrs)}:${pad(mins)}:${pad(secs)}`,
+            shiftName: shift
+        };
+    }
+
+    updateMachineConfiguration(machineId, updates) {
+        const m = this.state.machines.find(x => x.machine_id === machineId);
+        if (!m) return;
+        Object.assign(m, updates);
+        this.saveLocalState();
+        return m;
+    }
+
+    triggerMachineFault(machineId, faultType = "WEFT_BREAK") {
+        const m = this.state.machines.find(x => x.machine_id === machineId);
+        if (!m) return;
+        m.current_status = "IDLE";
+        m.current_rpm = 0;
+        m.idle_seconds = 1;
+        m.is_idle_alert = true;
+        if (m.weft_stops_shift !== undefined) m.weft_stops_shift += 1;
+        this.saveLocalState();
     }
 
     loadLocalState() {
