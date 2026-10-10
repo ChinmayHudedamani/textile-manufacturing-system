@@ -4,10 +4,46 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Everest Textile Manufacturing System (ETMS) - Enterprise HUD</title>
+  
+  <!-- 1. Tailwind CSS Play CDN (Zero-Build Utility Architecture) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            zinc: {
+              950: '#09090b',
+              900: '#18181b',
+              850: '#202024',
+              800: '#27272a',
+              700: '#3f3f46'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+            display: ['Outfit', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- 2. Alpine.js for Modern Reactive Controls -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <!-- 3. Lucide Icons for Premium Crisp SVGs -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Google Fonts: Inter, JetBrains Mono, Outfit -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap">
+  
   <link rel="stylesheet" href="css/style.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧵</text></svg>">
 </head>
-<body>
+<body class="bg-slate-100 text-slate-900 font-sans antialiased">
 
   <!-- TOP STATUS & SYSTEM HUD -->
   <header class="mill-header">
@@ -358,15 +394,15 @@
             <span class="status-badge" id="qcActiveCurrentStatus">PENDING</span>
           </div>
 
-          <div id="activeRollInspectCard" style="background: rgba(0,0,0,0.25); padding: 1rem; border-radius: 10px; margin-bottom: 1.25rem;">
+          <div id="activeRollInspectCard" style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 1rem; border-radius: 10px; margin-bottom: 1.25rem;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-family: var(--font-mono); font-weight: 700; font-size: 1.1rem; color: #38bdf8;" id="qcActiveBarcode">ROLL-081-PENDING-03</span>
-              <span style="font-size: 0.8rem; color: var(--text-dim);">Source Loom: <strong style="color:#fff;" id="qcActiveMachine">WEAVE-LOOM-04</strong></span>
+              <span style="font-family: var(--font-mono); font-weight: 700; font-size: 1.1rem; color: #0284c7;" id="qcActiveBarcode">ROLL-081-PENDING-03</span>
+              <span style="font-size: 0.8rem; color: #64748b;">Source Loom: <strong style="color:#0f172a;" id="qcActiveMachine">WEAVE-LOOM-04</strong></span>
             </div>
-            <div style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-muted); display: flex; gap: 1.5rem;">
-              <span>Length: <strong style="color:#fff;" id="qcActiveLength">135.0 m</strong></span>
-              <span>Weight: <strong style="color:#fff;" id="qcActiveWeight">29.7 kg</strong></span>
-              <span>Operator: <strong style="color:#fff;" id="qcActiveOperator">OP-403</strong></span>
+            <div style="margin-top: 0.5rem; font-size: 0.85rem; color: #64748b; display: flex; gap: 1.5rem;">
+              <span>Length: <strong style="color:#0f172a;" id="qcActiveLength">135.0 m</strong></span>
+              <span>Weight: <strong style="color:#0f172a;" id="qcActiveWeight">29.7 kg</strong></span>
+              <span>Operator: <strong style="color:#0f172a;" id="qcActiveOperator">OP-403</strong></span>
             </div>
           </div>
 
@@ -482,7 +518,7 @@
         <div class="glass-panel">
           <h3 style="margin-bottom: 1rem; font-family: var(--font-display);">Loading Dock Manifest Terminal</h3>
 
-          <div style="background: rgba(6, 182, 212, 0.08); border: 1px solid var(--border-glow); padding: 1rem; border-radius: 10px; margin-bottom: 1.25rem;">
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 1rem; border-radius: 10px; margin-bottom: 1.25rem;">
             <div class="grid-2" style="gap: 1rem;">
               <div>
                 <div class="form-label">Assigned Invoice Number</div>
@@ -518,16 +554,16 @@
           </form>
 
           <!-- Interactive Test Invariant Scenarios -->
-          <div style="margin-top: 1rem; background: rgba(0,0,0,0.3); padding: 0.85rem; border-radius: 8px;">
+          <div style="margin-top: 1rem; background: #f8fafc; border: 1px solid #e2e8f0; padding: 0.85rem; border-radius: 8px;">
             <div class="form-label" style="margin-bottom: 0.4rem;">Test Invariant Verification Quick Clicks</div>
             <div style="display: flex; flex-direction: column; gap: 0.4rem;">
-              <button class="btn btn-ghost" style="justify-content: flex-start; font-size: 0.75rem;" onclick="setDispatchTestBarcode('ROLL-094-PASS-01')">
+              <button class="btn btn-ghost" style="justify-content: flex-start; font-size: 0.75rem; background:#ffffff;" onclick="setDispatchTestBarcode('ROLL-094-PASS-01')">
                 ✅ <strong>Valid Scan:</strong> ROLL-094-PASS-01 (Passed QC ➔ Commits to manifest)
               </button>
-              <button class="btn btn-ghost" style="justify-content: flex-start; font-size: 0.75rem;" onclick="setDispatchTestBarcode('ROLL-081-PENDING-03')">
+              <button class="btn btn-ghost" style="justify-content: flex-start; font-size: 0.75rem; background:#ffffff;" onclick="setDispatchTestBarcode('ROLL-081-PENDING-03')">
                 ❌ <strong>Uninspected Roll:</strong> ROLL-081-PENDING-03 (Blocks dispatch ➔ Status PENDING)
               </button>
-              <button class="btn btn-ghost" style="justify-content: flex-start; font-size: 0.75rem; border-color: rgba(239, 68, 68, 0.4);" onclick="setDispatchTestBarcode('ROLL-081-DISPATCHED-02')">
+              <button class="btn btn-ghost" style="justify-content: flex-start; font-size: 0.75rem; background:#ffffff; border-color: rgba(239, 68, 68, 0.4);" onclick="setDispatchTestBarcode('ROLL-081-DISPATCHED-02')">
                 🚨 <strong>Double Dispatch:</strong> ROLL-081-DISPATCHED-02 (Triggers Klaxon Alarm ➔ Already Loaded!)
               </button>
             </div>
@@ -660,9 +696,9 @@
         <div class="margin-hero-box">
           <div class="form-label" style="letter-spacing: 0.08em;">CONTRACT GROSS PROFIT MARGIN</div>
           <div class="margin-stat" id="abcGrossMarginPct">22.7%</div>
-          <div style="font-size: 0.95rem; color: var(--text-muted); margin-top: 0.5rem;">
-            True Manufacturing Cost: <strong style="color:#fff;" id="abcUnitCost">$37.51 / m</strong> | 
-            Contract Price: <strong style="color:#38bdf8;" id="abcContractPrice">$48.50 / m</strong>
+          <div style="font-size: 0.92rem; color: #64748b; margin-top: 0.5rem;">
+            True Manufacturing Cost: <strong style="color:#0f172a;" id="abcUnitCost">$37.51 / m</strong> | 
+            Contract Price: <strong style="color:#0284c7;" id="abcContractPrice">$48.50 / m</strong>
           </div>
         </div>
 
@@ -676,13 +712,13 @@
           </select>
 
           <div class="grid-2" style="gap: 0.75rem;">
-            <div style="background: rgba(0,0,0,0.25); padding: 0.75rem; border-radius: 8px;">
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 0.75rem; border-radius: 8px;">
               <div class="form-label">Total Manufacturing Cost</div>
-              <div style="font-family: var(--font-mono); font-size: 1.35rem; font-weight: 700; color: #f87171;" id="abcTotalCostVal">$129,415</div>
+              <div style="font-family: var(--font-mono); font-size: 1.35rem; font-weight: 700; color: #e11d48;" id="abcTotalCostVal">$129,415</div>
             </div>
-            <div style="background: rgba(0,0,0,0.25); padding: 0.75rem; border-radius: 8px;">
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 0.75rem; border-radius: 8px;">
               <div class="form-label">Contract Revenue</div>
-              <div style="font-family: var(--font-mono); font-size: 1.35rem; font-weight: 700; color: #34d399;" id="abcRevenueVal">$167,325</div>
+              <div style="font-family: var(--font-mono); font-size: 1.35rem; font-weight: 700; color: #059669;" id="abcRevenueVal">$167,325</div>
             </div>
           </div>
         </div>
@@ -954,5 +990,10 @@
   <script src="js/sound.js"></script>
   <script src="js/store.js"></script>
   <script src="js/app.js"></script>
+  <script>
+    if (window.lucide) {
+      lucide.createIcons();
+    }
+  </script>
 </body>
 </html>
