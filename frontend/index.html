@@ -239,51 +239,111 @@
     </section>
 
     <!-- ===================================================================
-         SCENE 3: QUALITY CONTROL & ASTM D5430 BENCH
+         SCENE 3: QUALITY CONTROL & ASTM D5430 BENCH (REFINED STUDIO EDITION)
          =================================================================== -->
     <section id="scene-qc" class="scene-view">
-      <div class="scene-header">
-        <div class="scene-title">
-          <h2>Quality Control & ASTM D5430 4-Point Roll Grading</h2>
-          <p>Scan fabric rolls, calculate penalty scores, and perform root-cause lineage back to loom and yarn batch</p>
+      <!-- Section Header with Breadcrumb and Status Filters -->
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+        <div>
+          <div class="breadcrumb" style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-dim); letter-spacing: 0.15em; margin-bottom: 0.5rem; text-transform: uppercase;">
+            QUALITY GATE &nbsp;/&nbsp; ROLLS
+          </div>
+          <h2 style="font-family: var(--font-display); font-size: 2.4rem; font-weight: 800; color: #fff; letter-spacing: -0.03em; margin: 0 0 0.4rem 0;">
+            Quality control
+          </h2>
+          <p style="font-size: 0.9rem; color: var(--text-muted); margin: 0;">
+            Inspect output at the gate. Defects stay connected to the machine and operator that made them.
+          </p>
+        </div>
+
+        <div style="display: flex; gap: 6px; background: rgba(15, 23, 42, 0.6); padding: 4px; border-radius: 9999px; border: 1px solid rgba(255,255,255,0.08);" id="qcFilterTabs">
+          <button class="filter-chip active" data-filter="ALL" style="padding: 6px 16px; border-radius: 9999px; border: 0; background: #fff; color: #000; font-weight: 600; font-size: 0.8rem; cursor: pointer;">All</button>
+          <button class="filter-chip" data-filter="PENDING" style="padding: 6px 16px; border-radius: 9999px; border: 0; background: transparent; color: var(--text-muted); font-weight: 500; font-size: 0.8rem; cursor: pointer;">Pending</button>
+          <button class="filter-chip" data-filter="REWORK" style="padding: 6px 16px; border-radius: 9999px; border: 0; background: transparent; color: var(--text-muted); font-weight: 500; font-size: 0.8rem; cursor: pointer;">Rework</button>
+          <button class="filter-chip" data-filter="PASSED" style="padding: 6px 16px; border-radius: 9999px; border: 0; background: transparent; color: var(--text-muted); font-weight: 500; font-size: 0.8rem; cursor: pointer;">Pass</button>
         </div>
       </div>
 
-      <div class="grid-2">
-        <!-- Inspection Terminal -->
+      <!-- Minimalist Apple/Porsche Metric Cards -->
+      <div class="grid-3" style="gap: 1.25rem; margin-bottom: 2rem;">
+        <div class="porsche-stat-card">
+          <div style="display: flex; gap: 1rem; align-items: center;">
+            <div class="porsche-icon-box amber">
+              <span>🕒</span>
+            </div>
+            <div>
+              <div class="porsche-stat-label">Pending inspection</div>
+              <div class="porsche-stat-num" id="qcPendingCount">1</div>
+              <div class="porsche-stat-sub">Need a decision</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="porsche-stat-card">
+          <div style="display: flex; gap: 1rem; align-items: center;">
+            <div class="porsche-icon-box green">
+              <span>✓</span>
+            </div>
+            <div>
+              <div class="porsche-stat-label">Pass rate</div>
+              <div class="porsche-stat-num" id="qcPassRate">94.2%</div>
+              <div class="porsche-stat-sub green">↑ 2.1% this shift</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="porsche-stat-card">
+          <div style="display: flex; gap: 1rem; align-items: center;">
+            <div class="porsche-icon-box red">
+              <span>⚠️</span>
+            </div>
+            <div>
+              <div class="porsche-stat-label">Rework queue</div>
+              <div class="porsche-stat-num" id="qcReworkCount">1</div>
+              <div class="porsche-stat-sub" id="qcAffectedRolls">1 roll affected</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Roll Inspection Ledger (Reference Mockup Format) -->
+      <div class="porsche-table-card">
+        <div class="porsche-table-header">
+          <div>ROLL</div>
+          <div>LINEAGE</div>
+          <div>DEFECT CATEGORY</div>
+          <div>DECISION</div>
+          <div style="text-align: right;">ACTION</div>
+        </div>
+        <div id="porscheRollsList"></div>
+      </div>
+
+      <!-- Interactive Deep-Dive Drawer / Active Inspection & Lineage Bench -->
+      <div class="grid-2" style="margin-top: 2rem;">
+        <!-- Detailed ASTM D5430 Grader -->
         <div class="glass-panel">
-          <h3 style="margin-bottom: 1rem; font-family: var(--font-display);">Inspection Bench Terminal</h3>
-          
-          <div class="form-group">
-            <label class="form-label">Scan Fabric Roll Barcode / QR</label>
-            <div style="display: flex; gap: 0.5rem;">
-              <input type="text" id="qcBarcodeScanInput" class="form-input mono" placeholder="Scan or enter ROLL-..." value="ROLL-081-PENDING-03" style="font-size: 1.1rem;">
-              <button class="btn btn-primary" id="loadRollForQcBtn">Load</button>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h3 style="font-family: var(--font-display); margin: 0;">Selected Roll Deep Inspection</h3>
+            <span class="status-badge" id="qcActiveCurrentStatus">PENDING</span>
+          </div>
+
+          <div id="activeRollInspectCard" style="background: rgba(0,0,0,0.25); padding: 1rem; border-radius: 10px; margin-bottom: 1.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-family: var(--font-mono); font-weight: 700; font-size: 1.1rem; color: #38bdf8;" id="qcActiveBarcode">ROLL-081-PENDING-03</span>
+              <span style="font-size: 0.8rem; color: var(--text-dim);">Source Loom: <strong style="color:#fff;" id="qcActiveMachine">WEAVE-LOOM-04</strong></span>
             </div>
-            <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
-              <button class="btn btn-ghost" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;" onclick="setQcBarcode('ROLL-081-PENDING-03')">Sample: ROLL-081-PENDING-03</button>
-              <button class="btn btn-ghost" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;" onclick="setQcBarcode('ROLL-081-REJECTED-04')">Sample: ROLL-081-REJECTED-04</button>
+            <div style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-muted); display: flex; gap: 1.5rem;">
+              <span>Length: <strong style="color:#fff;" id="qcActiveLength">135.0 m</strong></span>
+              <span>Weight: <strong style="color:#fff;" id="qcActiveWeight">29.7 kg</strong></span>
+              <span>Operator: <strong style="color:#fff;" id="qcActiveOperator">OP-403</strong></span>
             </div>
           </div>
 
-          <div id="activeRollInspectCard" style="background: rgba(0,0,0,0.25); padding: 1rem; border-radius: 8px; margin: 1rem 0;">
-            <div style="display: flex; justify-content: space-between;">
-              <span style="font-family: var(--font-mono); font-weight: 700; color: #38bdf8;" id="qcActiveBarcode">ROLL-081-PENDING-03</span>
-              <span class="status-badge" id="qcActiveCurrentStatus">PENDING</span>
-            </div>
-            <div style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-muted);">
-              Length: <strong style="color:#fff;" id="qcActiveLength">135.0 m</strong> | 
-              Weight: <strong style="color:#fff;" id="qcActiveWeight">29.7 kg</strong> | 
-              Source Loom: <strong style="color:#38bdf8;" id="qcActiveMachine">WEAVE-LOOM-04</strong>
-            </div>
-          </div>
-
-          <!-- ASTM 4-Point Defect Grader -->
           <div class="grid-2" style="gap: 0.75rem;">
             <div class="form-group">
               <label class="form-label">Defect Classification</label>
               <select id="qcDefectTypeSelect" class="form-select">
-                <option value="NONE">None (Clean Fabric)</option>
+                <option value="NONE">— None (Clean Fabric) —</option>
                 <option value="HOLE">Hole / Cut (3-4 Points)</option>
                 <option value="UNEVEN_WEAVING">Uneven Weft / Tension (2-4 Points)</option>
                 <option value="COLOR_MISMATCH">Color Shade Mismatch (3 Points)</option>
@@ -297,28 +357,27 @@
             </div>
           </div>
 
-          <!-- Verdict Actions -->
-          <div class="form-label">Inspection Verdict</div>
+          <div class="form-label" style="margin-top: 1rem;">Direct Verdict Decision</div>
           <div class="qc-verdict-grid">
             <button class="verdict-btn pass" id="btnVerdictPass">
-              ✅ PASS<br><small style="font-size:0.7rem; font-weight:normal;">Grade A / B</small>
+              ✓ Pass<br><small style="font-size:0.7rem; font-weight:normal;">Grade A / B</small>
             </button>
             <button class="verdict-btn rework" id="btnVerdictRework">
-              ⚠️ REWORK<br><small style="font-size:0.7rem; font-weight:normal;">Finishing Batch</small>
+              ⚠️ Rework<br><small style="font-size:0.7rem; font-weight:normal;">Finishing Batch</small>
             </button>
             <button class="verdict-btn reject" id="btnVerdictReject">
-              ❌ REJECT<br><small style="font-size:0.7rem; font-weight:normal;">Scrap Loss</small>
+              ✕ Reject<br><small style="font-size:0.7rem; font-weight:normal;">Scrap Loss</small>
             </button>
           </div>
 
           <div id="qcResultFeedback" style="display:none; padding: 0.75rem; border-radius: 8px; font-size: 0.85rem; margin-top: 1rem;"></div>
         </div>
 
-        <!-- Upstream Root-Cause Lineage Trace -->
+        <!-- Upstream Lineage & Root Cause Trace -->
         <div class="glass-panel">
           <h3 style="margin-bottom: 0.5rem; font-family: var(--font-display);">Upstream Root-Cause Lineage</h3>
           <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 1rem;">
-            Instantly traces any roll back to its originating machine, shift operator, and yarn delivery lot
+            Instantly traces any roll back to its originating machine, shift operator, and raw yarn delivery lot
           </p>
 
           <div class="lineage-trace-box" id="lineageDisplayBox">

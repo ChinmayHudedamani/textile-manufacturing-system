@@ -388,12 +388,178 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     // =================================================================
-    // SCENE 3: QUALITY CONTROL & ASTM D5430 BENCH
+    // SCENE 3: QUALITY CONTROL & ASTM D5430 BENCH (REFINED STUDIO EDITION)
     // =================================================================
+    let currentQcFilter = "ALL";
+
+    // Filter Chips Event Binding
+    const qcFilterBtns = document.querySelectorAll("#qcFilterTabs .filter-chip");
+    qcFilterBtns.forEach(btn => {
+        btn.addEventListener("click", () => {
+            soundManager.playClick();
+            qcFilterBtns.forEach(b => {
+                b.classList.remove("active");
+                b.style.background = "transparent";
+                b.style.color = "var(--text-muted)";
+            });
+            btn.classList.add("active");
+            btn.style.background = "#fff";
+            btn.style.color = "#000";
+            currentQcFilter = btn.dataset.filter;
+            renderQCBench();
+        });
+    });
+
     function renderQCBench() {
-        const barcode = document.getElementById("qcBarcodeScanInput").value.trim();
-        loadQCBarcodeData(barcode);
+        const rolls = store.state.rolls;
+
+        // Metric Card Updates
+        const pendingRolls = rolls.filter(r => r.qc_status === "PENDING");
+        const reworkRolls = rolls.filter(r => r.qc_status === "REWORK");
+        const passedRolls = rolls.filter(r => r.qc_status === "PASSED");
+        const passRate = rolls.length > 0 ? ((passedRolls.length / rolls.length) * 100).toFixed(1) : "94.2";
+
+        const pendingCountEl = document.getElementById("qcPendingCount");
+        if (pendingCountEl) pendingCountEl.textContent = pendingRolls.length;
+
+        const passRateEl = document.getElementById("qcPassRate");
+        if (passRateEl) passRateEl.textContent = `${passRate}%`;
+
+        const reworkCountEl = document.getElementById("qcReworkCount");
+        if (reworkCountEl) reworkCountEl.textContent = reworkRolls.length;
+
+        const affectedRollsEl = document.getElementById("qcAffectedRolls");
+        if (affectedRollsEl) affectedRollsEl.textContent = `${reworkRolls.length} roll${reworkRolls.length === 1 ? '' : 's'} affected`;
+
+        // Render Porsche-Style Roll Table
+        const listContainer = document.getElementById("porscheRollsList");
+        if (listContainer) {
+            listContainer.innerHTML = "";
+
+            const filteredRolls = rolls.filter(r => {
+                if (currentQcFilter === "ALL") return true;
+                return r.qc_status === currentQcFilter;
+            });
+
+            if (filteredRolls.length === 0) {
+                listContainer.innerHTML = `
+                    <div style="padding: 2.5rem; text-align: center; color: #64748b; font-size: 0.9rem;">
+                        No rolls matching the <strong>${currentQcFilter}</strong> inspection criteria.
+                    </div>
+                `;
+            } else {
+                filteredRolls.forEach(roll => {
+                    const row = document.createElement("div");
+                    row.className = "porsche-table-row";
+
+                    // Operator Name lookup
+                    const operatorMap = {
+                        "OP-812": "Ravi Kumar",
+                        "OP-403": "Meena Shah",
+                        "OP-109": "Arjun Das",
+                        "OP-301": "Suresh Patel"
+                    };
+                    const operatorName = operatorMap[roll.operator_id] || "Ravi Kumar";
+
+                    // Defect Category Options
+                    const defectOptions = [
+                        { val: "NONE", label: "— Clean —" },
+                        { val: "UNEVEN_WEAVING", label: "Uneven weaving" },
+                        { val: "OIL_STAIN", label: "Oil stain" },
+                        { val: "COLOR_MISMATCH", label: "Color mismatch" },
+                        { val: "HOLE", label: "Cut / Hole" },
+                        { val: "SLUB", label: "Yarn Slub" }
+                    ];
+
+                    let defectSelectHtml = `<select class="porsche-select-dropdown" onchange="updateRollDefect('${roll.roll_barcode}', this.value)">`;
+                    defectOptions.forEach(opt => {
+                        const isSel = (roll.defect_type || "NONE") === opt.val ? "selected" : "";
+                        defectSelectHtml += `<option value="${opt.val}" ${isSel}>${opt.label}</option>`;
+                    });
+                    defectSelectHtml += `</select>`;
+
+                    // Decision Button States
+                    const isPass = roll.qc_status === "PASSED" ? "selected-pass" : "";
+                    const isRework = roll.qc_status === "REWORK" ? "selected-rework" : "";
+                    const isReject = roll.qc_status === "REJECTED" ? "selected-reject" : "";
+
+                    row.innerHTML = `
+                        <div style="display: flex; align-items: center; gap: 14px;">
+                            <div style="width: 44px; height: 44px; border-radius: 8px; background: #f1f5f9; display: grid; place-items: center; font-size: 1.25rem;">
+                                🧵
+                            </div>
+                            <div>
+                                <div class="porsche-roll-id">${roll.roll_barcode}</div>
+                                <div class="porsche-roll-meta">${roll.length_meters}m · ${operatorName}</div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div style="font-weight: 700; font-size: 0.9rem; color: #0f172a;">${roll.order_id === 'ord-zara-081' ? 'ORD-1042' : 'ORD-1043'}</div>
+                            <div style="font-size: 0.75rem; color: #64748b;">Machine ${roll.machine_id}</div>
+                        </div>
+
+                        <div>
+                            ${defectSelectHtml}
+                        </div>
+
+                        <div>
+                            <div class="porsche-decision-group">
+                                <button class="porsche-btn-choice ${isPass}" onclick="quickVerdict('${roll.roll_barcode}', 'PASSED')">
+                                    ✓ Pass
+                                </button>
+                                <button class="porsche-btn-choice ${isRework}" onclick="quickVerdict('${roll.roll_barcode}', 'REWORK')">
+                                    Rework
+                                </button>
+                                <button class="porsche-btn-choice ${isReject}" onclick="quickVerdict('${roll.roll_barcode}', 'REJECTED')">
+                                    ✕ Reject
+                                </button>
+                            </div>
+                        </div>
+
+                        <div style="text-align: right;">
+                            <button class="porsche-arrow-btn" onclick="setQcBarcode('${roll.roll_barcode}')" title="Inspect Deep Lineage">
+                                →
+                            </button>
+                        </div>
+                    `;
+                    listContainer.appendChild(row);
+                });
+            }
+        }
+
+        // Deep Inspection Preview Update
+        const activeBarcode = document.getElementById("qcActiveBarcode") ? document.getElementById("qcActiveBarcode").textContent : "ROLL-081-PENDING-03";
+        loadQCBarcodeData(activeBarcode);
     }
+
+    window.updateRollDefect = (barcode, defectVal) => {
+        soundManager.playClick();
+        const roll = store.state.rolls.find(r => r.roll_barcode === barcode);
+        if (roll) {
+            roll.defect_type = defectVal;
+            if (defectVal !== "NONE" && roll.defect_points === 0) {
+                roll.defect_points = 5;
+            }
+            renderQCBench();
+        }
+    };
+
+    window.quickVerdict = async (barcode, verdict) => {
+        soundManager.playClick();
+        const roll = store.state.rolls.find(r => r.roll_barcode === barcode);
+        const defect = roll ? (roll.defect_type || "NONE") : "NONE";
+        const points = roll ? (roll.defect_points || 0) : 0;
+
+        try {
+            await store.processQCInspection(barcode, verdict, defect, points, "OP-QC-LEAD");
+            if (verdict === "PASSED") soundManager.playSuccessChime();
+            else soundManager.playAlarmBuzzer();
+            renderQCBench();
+        } catch (e) {
+            alert(`Decision error: ${e.message}`);
+        }
+    };
 
     function loadQCBarcodeData(barcode) {
         const roll = store.state.rolls.find(r => r.roll_barcode.toUpperCase() === barcode.toUpperCase()) || store.state.rolls[2];
