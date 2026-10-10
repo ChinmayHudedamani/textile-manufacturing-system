@@ -12,6 +12,7 @@ from backend.app.seed_data import seed_initial_mill_data
 @pytest_asyncio.fixture(autouse=True)
 async def init_test_db():
     async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
     async with AsyncSessionLocal() as session:
         await seed_initial_mill_data(session)

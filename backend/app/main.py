@@ -1,10 +1,12 @@
 import uuid
+import hashlib
+import json
 from datetime import datetime
 from decimal import Decimal
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi import FastAPI, HTTPException, Depends, status, Header
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, func
@@ -14,7 +16,7 @@ from backend.app.database import engine, Base, get_db, AsyncSessionLocal
 from backend.app.models import (
     RawMaterialBatch, CustomerOrder, Machine,
     FabricRoll, DispatchItem, LaborShiftLog, 
-    CustomerNotification, MaterialAllocation
+    CustomerNotification, MaterialAllocation, AuditEventLog
 )
 from backend.app.schemas import (
     InwardYarnDTO, RawMaterialBatchResponse,
@@ -27,6 +29,9 @@ from backend.app.schemas import (
 )
 from backend.app.costing import calculate_activity_based_costing
 from backend.app.seed_data import seed_initial_mill_data
+
+# In-memory Idempotency Cache to handle scanner retries / duplicate barcode reads
+IDEMPOTENCY_CACHE: Dict[str, Dict[str, Any]] = {}
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -361,13 +366,24 @@ async def get_roll_upstream_traceability(roll_barcode: str, db: AsyncSession = D
 # =====================================================================
 
 @app.post("/api/v1/dispatch/scan-truck")
-async def scan_roll_to_truck(payload: DispatchScanDTO, db: AsyncSession = Depends(get_db)):
+async def scan_roll_to_truck(
+    payload: DispatchScanDTO, 
+    db: AsyncSession = Depends(get_db),
+    idempotency_key: Optional[str] = Header(None, alias="Idempotency-Key")
+):
     """
     CRITICAL INVARIANT CHECKS:
-    1. Roll must exist.
-    2. Roll must have passed QC (qc_status == 'PASSED').
-    3. Roll must not already be dispatched on any invoice (Anti-Double Dispatch Lock).
+    1. Idempotency Key check to return cached 200 on barcode scanner double-presses.
+    2. Roll must exist.
+    3. Roll must have passed QC (qc_status == 'PASSED').
+    4. Roll must not already be dispatched on any invoice (Anti-Double Dispatch Lock).
+    5. Immutable cryptographic audit event log recorded.
     """
+    # 0. Idempotency check
+    cache_key = idempotency_key or f"SCAN:{payload.roll_barcode}:{payload.invoice_number.strip().upper()}"
+    if cache_key in IDEMPOTENCY_CACHE:
+        return IDEMPOTENCY_CACHE[cache_key]
+
     # 1. Fetch Roll with update lock
     roll_stmt = select(FabricRoll).where(FabricRoll.roll_barcode == payload.roll_barcode)
     res = await db.execute(roll_stmt)
@@ -392,12 +408,24 @@ async def scan_roll_to_truck(payload: DispatchScanDTO, db: AsyncSession = Depend
     )
     existing_dispatch = dispatch_check.scalar_one_or_none()
     if existing_dispatch:
+        # Check if this exact scan was already submitted on the same invoice (idempotent re-scan)
+        if existing_dispatch.invoice_number == payload.invoice_number.strip().upper():
+            return {
+                "status": "DISPATCH_CONFIRMED",
+                "roll_barcode": payload.roll_barcode,
+                "length_meters": float(roll.length_meters),
+                "gross_weight_kg": float(roll.gross_weight_kg),
+                "truck_plate": existing_dispatch.truck_license_plate,
+                "invoice_number": existing_dispatch.invoice_number,
+                "dispatched_at": existing_dispatch.dispatched_at.isoformat()
+            }
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"CRITICAL: Double Dispatch Blocked! Roll '{payload.roll_barcode}' was already loaded onto Truck {existing_dispatch.truck_license_plate} under Invoice {existing_dispatch.invoice_number}."
         )
 
     # 4. Commit Dispatch Record
+    now_utc = datetime.utcnow()
     dispatch_entry = DispatchItem(
         dispatch_id=str(uuid.uuid4()),
         roll_id=roll.roll_id,
@@ -405,7 +433,7 @@ async def scan_roll_to_truck(payload: DispatchScanDTO, db: AsyncSession = Depend
         truck_license_plate=payload.truck_plate.strip().upper(),
         invoice_number=payload.invoice_number.strip().upper(),
         dispatched_by=payload.dispatched_by or "DISPATCH_CLERK_1",
-        dispatched_at=datetime.utcnow()
+        dispatched_at=now_utc
     )
     notif = CustomerNotification(
         notification_id=str(uuid.uuid4()),
@@ -413,11 +441,29 @@ async def scan_roll_to_truck(payload: DispatchScanDTO, db: AsyncSession = Depend
         milestone_event="DISPATCH_COMPLETED",
         channel="SMS_AND_PORTAL",
         message_body=f"Roll {roll.roll_barcode} ({float(roll.length_meters):.1f}m) loaded onto Truck {payload.truck_plate.strip().upper()} under Invoice {payload.invoice_number.strip().upper()}.",
-        sent_at=datetime.utcnow()
+        sent_at=now_utc
     )
+
+    # Cryptographic Audit Log
+    raw_payload_str = f"{roll.roll_barcode}:{payload.truck_plate}:{payload.invoice_number}:{now_utc.isoformat()}"
+    payload_hash = hashlib.sha256(raw_payload_str.encode("utf-8")).hexdigest()
+    audit_entry = AuditEventLog(
+        entity_name="FabricRoll",
+        entity_id=roll.roll_id,
+        action_type="DISPATCH_COMMITTED",
+        actor_id=payload.dispatched_by or "DISPATCH_CLERK_1",
+        payload_hash=payload_hash,
+        details=json.dumps({
+            "truck_plate": payload.truck_plate.upper(),
+            "invoice_number": payload.invoice_number.upper(),
+            "length_meters": float(roll.length_meters)
+        })
+    )
+
     try:
         db.add(dispatch_entry)
         db.add(notif)
+        db.add(audit_entry)
         await db.commit()
     except IntegrityError:
         await db.rollback()
@@ -426,7 +472,7 @@ async def scan_roll_to_truck(payload: DispatchScanDTO, db: AsyncSession = Depend
             detail=f"CRITICAL: Double Dispatch Blocked! Roll '{payload.roll_barcode}' was claimed concurrently on another invoice."
         )
 
-    return {
+    result_payload = {
         "status": "DISPATCH_CONFIRMED",
         "roll_barcode": payload.roll_barcode,
         "length_meters": float(roll.length_meters),
@@ -435,6 +481,8 @@ async def scan_roll_to_truck(payload: DispatchScanDTO, db: AsyncSession = Depend
         "invoice_number": payload.invoice_number.upper(),
         "dispatched_at": dispatch_entry.dispatched_at.isoformat()
     }
+    IDEMPOTENCY_CACHE[cache_key] = result_payload
+    return result_payload
 
 @app.get("/api/v1/dispatch/manifest/{invoice_number}")
 async def get_invoice_manifest(invoice_number: str, db: AsyncSession = Depends(get_db)):

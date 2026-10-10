@@ -615,9 +615,13 @@ class ETMSStore {
     async dispatchRollToTruck(barcode, truckPlate, invoiceNumber) {
         if (this.isBackendOnline) {
             try {
+                const idempotencyKey = `CLERK-${Date.now()}-${barcode}-${invoiceNumber.trim().toUpperCase()}`;
                 const res = await fetch(`${API_BASE}/dispatch/scan-truck`, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: { 
+                        "Content-Type": "application/json",
+                        "Idempotency-Key": idempotencyKey
+                    },
                     body: JSON.stringify({
                         roll_barcode: barcode,
                         truck_plate: truckPlate,

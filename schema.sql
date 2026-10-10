@@ -178,7 +178,21 @@ CREATE TABLE customer_notifications (
 );
 
 -- ---------------------------------------------------------------------
--- 9. HIGH-VELOCITY QUERY INDEXES
+-- 9. REGULATORY AUDIT LOG TRAIL (IMMUTABLE HASH CHAIN)
+-- ---------------------------------------------------------------------
+CREATE TABLE audit_event_log (
+    event_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    entity_name VARCHAR(64) NOT NULL,
+    entity_id VARCHAR(64) NOT NULL,
+    action_type VARCHAR(32) NOT NULL, -- INSERT, UPDATE, DISPATCH, QC_OVERRIDE
+    actor_id VARCHAR(64) NOT NULL,
+    payload_hash VARCHAR(64) NOT NULL, -- SHA-256 for cryptographic tamper proofing
+    details JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ---------------------------------------------------------------------
+-- 10. HIGH-VELOCITY QUERY INDEXES
 -- ---------------------------------------------------------------------
 CREATE INDEX idx_rolls_order_id ON fabric_rolls(order_id);
 CREATE INDEX idx_rolls_qc_status ON fabric_rolls(qc_status);
@@ -187,9 +201,26 @@ CREATE INDEX idx_raw_materials_stock ON raw_material_batches(current_stock_kg);
 CREATE INDEX idx_dispatch_invoice ON dispatch_items(invoice_number);
 CREATE INDEX idx_dispatch_truck ON dispatch_items(truck_license_plate);
 CREATE INDEX idx_notifications_order_id ON customer_notifications(order_id);
+CREATE INDEX idx_audit_entity ON audit_event_log(entity_name, entity_id);
 
 -- ---------------------------------------------------------------------
--- 10. REAL-TIME REPORTING VIEWS
+-- 11. AUTOMATED TIMESTAMP UPDATE TRIGGER
+-- ---------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION fn_update_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_customer_orders_updated
+BEFORE UPDATE ON customer_orders
+FOR EACH ROW
+EXECUTE FUNCTION fn_update_timestamp();
+
+-- ---------------------------------------------------------------------
+-- 12. REAL-TIME REPORTING VIEWS
 -- ---------------------------------------------------------------------
 CREATE OR REPLACE VIEW view_order_progress AS
 SELECT 

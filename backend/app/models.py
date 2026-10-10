@@ -37,6 +37,7 @@ class CustomerOrder(Base):
     delivery_deadline = Column(String(32), nullable=False)
     order_status = Column(String(32), nullable=False, default="ORDER_RECEIVED", index=True)
     contract_price_per_meter = Column(Numeric(10, 2), nullable=False, default=Decimal("45.00"))
+    version_id = Column(Integer, nullable=False, default=1)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
@@ -84,6 +85,7 @@ class FabricRoll(Base):
     qc_status = Column(String(32), nullable=False, default="PENDING", index=True) # PENDING, PASSED, REWORK, REJECTED
     defect_type = Column(String(32), nullable=False, default="NONE") # NONE, HOLE, COLOR_MISMATCH, etc.
     defect_points = Column(Integer, nullable=False, default=0) # ASTM D5430 points
+    version_id = Column(Integer, nullable=False, default=1)
     inspection_timestamp = Column(DateTime, nullable=True)
     produced_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
@@ -126,3 +128,15 @@ class CustomerNotification(Base):
     sent_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     order = relationship("CustomerOrder", back_populates="notifications")
+
+class AuditEventLog(Base):
+    __tablename__ = "audit_event_log"
+
+    event_id = Column(String(36), primary_key=True, default=generate_uuid)
+    entity_name = Column(String(64), nullable=False, index=True)
+    entity_id = Column(String(64), nullable=False, index=True)
+    action_type = Column(String(32), nullable=False)
+    actor_id = Column(String(64), nullable=False)
+    payload_hash = Column(String(64), nullable=False) # SHA-256
+    details = Column(Text, nullable=False, default="{}")
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

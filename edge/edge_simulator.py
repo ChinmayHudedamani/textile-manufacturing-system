@@ -55,44 +55,54 @@ class LoomPhysicsEngine:
         machine_id: str, 
         initial_picks: int = 105412,
         rated_rpm: int = 740,
-        base_amps: float = 15.4
+        base_amps: float = 15.4,
+        failure_rate_lambda: float = 0.025 # Mean Time Between Failures parameter (Poisson process)
     ):
         self.machine_id = machine_id
         self.picks_cumulative = initial_picks
         self.rated_rpm = rated_rpm
         self.base_amps = base_amps
+        self.failure_rate_lambda = failure_rate_lambda
         self.state = "RUNNING"
         self.idle_seconds = 0
         self.tick_counter = 0
+        import random
+        self._rng = random.Random(hash(machine_id) & 0xFFFFFFFF)
 
     def step(self, dt_seconds: float = 1.0) -> TelemetryPacket:
         """
         Advances the physical simulation by dt_seconds:
-        Updates rotational speed, increments optical pulses, and computes current draw.
+        - Stochastic MTBF based on Poisson / Exponential arrival of warp/weft breaks.
+        - Realistic three-phase induction motor magnetizing current vs full-load torque current.
         """
         self.tick_counter += 1
 
-        # Periodic idle scenario: loom stops every 30 ticks to simulate weft break / bobbin change
-        is_idle_cycle = (self.tick_counter % 30 in (0, 1, 2, 3))
+        # Poisson process: Probability of failure event in interval dt is 1 - exp(-lambda * dt)
+        import math
+        p_failure = 1.0 - math.exp(-self.failure_rate_lambda * dt_seconds)
 
-        if is_idle_cycle:
-            self.state = "IDLE"
+        if self.state == "RUNNING":
+            if self._rng.random() < p_failure:
+                self.state = "IDLE"
+                self.idle_seconds = 1
+                current_rpm = 0
+                current_amps = 1.80 # No-load magnetizing excitation current
+            else:
+                self.idle_seconds = 0
+                current_rpm = self.rated_rpm
+                # Calculate optical pulses generated in time dt: Delta P = (RPM / 60) * dt
+                picks_delta = int((self.rated_rpm / 60.0) * dt_seconds)
+                self.picks_cumulative += max(1, picks_delta)
+                # Realistic load current variation (Gaussian jitter around base amps)
+                current_amps = round(self.base_amps + self._rng.gauss(0.0, 0.4), 2)
+        else:
+            # In IDLE: operator resolution probability (recovery within ~3-5 ticks)
             self.idle_seconds += int(dt_seconds)
             current_rpm = 0
-            # Magnetizing no-load current of disengaged induction motor (approx 1.8 A)
             current_amps = 1.80
-        else:
-            self.state = "RUNNING"
-            self.idle_seconds = 0
-            current_rpm = self.rated_rpm
-
-            # Calculate optical pulses generated in time dt: Delta P = (RPM / 60) * dt
-            picks_delta = int((self.rated_rpm / 60.0) * dt_seconds)
-            self.picks_cumulative += max(1, picks_delta)
-
-            # High-speed air compressor & beat-up current with periodic ripple (Amps)
-            ripple = (self.tick_counter % 5) * 0.22
-            current_amps = round(self.base_amps + ripple, 2)
+            if self.idle_seconds >= 3 and self._rng.random() < 0.35:
+                self.state = "RUNNING"
+                self.idle_seconds = 0
 
         timestamp_ms = int(time.time() * 1000)
 
