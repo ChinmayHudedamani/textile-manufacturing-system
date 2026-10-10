@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  edge-telemetry-daemon:
+    build:
+      context: ./edge
+      dockerfile: Dockerfile
+    restart: always
+    environment:
+      - BROKER_URI=tcp://mqtt-broker:1883
+      - MACHINE_ID=WEAVE-LOOM-04
+    depends_on:
+      - mqtt-broker
+
+  mqtt-broker:
+    image: eclipse-mosquitto:2.0
+    restart: always
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
+
+  postgres-db:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: millpassword
+      POSTGRES_DB: everest_manufacturing
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/init.sql
+
+  redis-cache:
+    image: redis:7.2-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+
+  api-core:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:millpassword@postgres-db:5432/everest_manufacturing
+      - MQTT_HOST=mqtt-broker
+      - MQTT_PORT=1883
+    depends_on:
+      - postgres-db
+      - mqtt-broker
+      - redis-cache
+
+volumes:
+  pgdata:
