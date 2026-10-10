@@ -1,0 +1,573 @@
+// =====================================================================
+// Everest Textile Manufacturing System (ETMS) - Main UI Controller
+// =====================================================================
+
+document.addEventListener("DOMContentLoaded", async () => {
+    // 1. Initialize State & Audio
+    let autoSimTimer = null;
+    let isAutoSimRunning = false;
+
+    // Check backend health
+    await store.checkBackendHealth();
+    updateHUDStatus();
+
+    // 2. Scene Navigation Tabs
+    const navTabs = document.querySelectorAll(".nav-tab");
+    const sceneViews = document.querySelectorAll(".scene-view");
+
+    navTabs.forEach(tab => {
+        tab.addEventListener("click", () => {
+            soundManager.playClick();
+            navTabs.forEach(t => t.classList.remove("active"));
+            sceneViews.forEach(v => v.classList.remove("active"));
+
+            tab.classList.add("active");
+            const targetSceneId = tab.dataset.scene;
+            const targetScene = document.getElementById(targetSceneId);
+            if (targetScene) {
+                targetScene.classList.add("active");
+                renderActiveScene(targetSceneId);
+            }
+        });
+    });
+
+    // 3. Audio Toggle
+    const soundToggleBtn = document.getElementById("soundToggleBtn");
+    soundToggleBtn.addEventListener("click", () => {
+        soundManager.isMuted = !soundManager.isMuted;
+        soundToggleBtn.textContent = soundManager.isMuted ? "🔇 AUDIO: MUTED" : "🔊 AUDIO: ON";
+        if (!soundManager.isMuted) soundManager.playSuccessChime();
+    });
+
+    // 4. Initial Render of All Modules
+    renderFloorHUD();
+    renderGateInward();
+    renderQCBench();
+    renderDispatchTerminal();
+    renderCustomerPortal("ORD-2026-081");
+    renderFinancialRollup("ord-zara-081");
+
+    // Subscribe to state changes
+    store.subscribe(() => {
+        updateHUDStatus();
+        const activeTab = document.querySelector(".nav-tab.active");
+        if (activeTab) {
+            renderActiveScene(activeTab.dataset.scene);
+        }
+    });
+
+    function renderActiveScene(sceneId) {
+        if (sceneId === "scene-floor") renderFloorHUD();
+        else if (sceneId === "scene-gate") renderGateInward();
+        else if (sceneId === "scene-qc") renderQCBench();
+        else if (sceneId === "scene-dispatch") renderDispatchTerminal();
+        else if (sceneId === "scene-customer") {
+            const ord = document.getElementById("custOrderSearchInput").value || "ORD-2026-081";
+            renderCustomerPortal(ord);
+        } else if (sceneId === "scene-financial") {
+            const ordId = document.getElementById("costingOrderSelect").value || "ord-zara-081";
+            renderFinancialRollup(ordId);
+        }
+    }
+
+    function updateHUDStatus() {
+        const pulse = document.getElementById("backendPulse");
+        const statusText = document.getElementById("edgeStatusText");
+        if (store.isBackendOnline) {
+            pulse.classList.remove("offline");
+            statusText.textContent = "ONLINE (FASTAPI)";
+        } else {
+            pulse.classList.add("offline");
+            statusText.textContent = "CLIENT DB (RESILIENT)";
+        }
+
+        const runningLooms = store.state.machines.filter(m => m.current_status === "RUNNING").length;
+        document.getElementById("activeLoomsCount").textContent = `${runningLooms} / ${store.state.machines.length}`;
+
+        // Global PPS (~ running looms * 12 picks/sec)
+        document.getElementById("globalPickRate").textContent = `${runningLooms * 12} PPS`;
+    }
+
+    // =================================================================
+    // SCENE 1: PRODUCTION FLOOR HUD
+    // =================================================================
+    function renderFloorHUD() {
+        const spinningCont = document.getElementById("spinningMachinesContainer");
+        const weavingCont = document.getElementById("weavingMachinesContainer");
+        const dyeingCont = document.getElementById("dyeingMachinesContainer");
+
+        spinningCont.innerHTML = "";
+        weavingCont.innerHTML = "";
+        dyeingCont.innerHTML = "";
+
+        let totalPicks = 0;
+        let totalAmps = 0.0;
+        let idleAlerts = 0;
+
+        store.state.machines.forEach(m => {
+            totalPicks += m.current_picks_cumulative;
+            totalAmps += m.current_power_draw_amps;
+            if (m.is_idle_alert) idleAlerts++;
+
+            const card = createMachineCard(m);
+            if (m.stage === "SPINNING") spinningCont.appendChild(card);
+            else if (m.stage === "WEAVING") weavingCont.appendChild(card);
+            else if (m.stage === "DYEING") dyeingCont.appendChild(card);
+        });
+
+        document.getElementById("totalPicksDisplay").textContent = totalPicks.toLocaleString();
+        document.getElementById("totalPowerAmps").textContent = `${totalAmps.toFixed(1)} A`;
+        document.getElementById("idleAlertsCount").textContent = `${idleAlerts} Machine${idleAlerts === 1 ? '' : 's'}`;
+    }
+
+    function createMachineCard(m) {
+        const div = document.createElement("div");
+        const isIdleAlert = m.is_idle_alert;
+        const statusClass = m.current_status.toLowerCase();
+
+        div.className = `machine-card ${statusClass} ${isIdleAlert ? 'idle-alert' : ''}`;
+        div.innerHTML = `
+            <div class="machine-header">
+                <div>
+                    <span class="machine-id">${m.machine_id}</span>
+                    <div style="font-size: 0.7rem; color: var(--text-dim);">${m.stage}</div>
+                </div>
+                <span class="status-badge ${m.current_status}">${m.current_status}</span>
+            </div>
+            
+            <div class="telemetry-metrics-grid">
+                <div class="metric-item">
+                    <span class="metric-label">Speed (RPM)</span>
+                    <span class="metric-val ${m.current_status === 'RUNNING' ? 'green' : 'amber'}">${m.current_rpm || 0}</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Current Draw</span>
+                    <span class="metric-val ${m.current_status === 'RUNNING' ? 'cyan' : ''}">${m.current_power_draw_amps.toFixed(1)} A</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Cumulative Picks</span>
+                    <span class="metric-val">${m.current_picks_cumulative.toLocaleString()}</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Idle Seconds</span>
+                    <span class="metric-val ${m.idle_seconds > 120 ? 'amber' : ''}">${m.idle_seconds}s</span>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
+                <span style="font-size: 0.7rem; color: var(--text-dim);">Overhead: $${m.overhead_hourly_rate}/hr</span>
+                <button class="btn btn-ghost" style="padding: 0.25rem 0.5rem; font-size: 0.7rem;" onclick="toggleMachine('${m.machine_id}')">
+                    ${m.current_status === 'RUNNING' ? 'Pause' : 'Start'}
+                </button>
+            </div>
+        `;
+        return div;
+    }
+
+    window.toggleMachine = (id) => {
+        soundManager.playClick();
+        store.toggleMachineState(id);
+    };
+
+    // Edge Simulator Controls
+    document.getElementById("triggerPulseBtn").addEventListener("click", () => {
+        soundManager.playClick();
+        store.tickTelemetry();
+    });
+
+    document.getElementById("toggleBenchmarkLoomBtn").addEventListener("click", () => {
+        soundManager.playClick();
+        store.toggleMachineState("WEAVE-LOOM-04");
+    });
+
+    const autoSimBtn = document.getElementById("autoSimulateBtn");
+    autoSimBtn.addEventListener("click", () => {
+        soundManager.playClick();
+        isAutoSimRunning = !isAutoSimRunning;
+        if (isAutoSimRunning) {
+            autoSimBtn.textContent = "⏸ Stop Auto-Loop";
+            autoSimBtn.classList.add("btn-danger");
+            autoSimBtn.classList.remove("btn-primary");
+            autoSimTimer = setInterval(() => store.tickTelemetry(), 1000);
+        } else {
+            autoSimBtn.textContent = "▶ Start Auto-Loop (1s Interval)";
+            autoSimBtn.classList.remove("btn-danger");
+            autoSimBtn.classList.add("btn-primary");
+            clearInterval(autoSimTimer);
+        }
+    });
+
+    // =================================================================
+    // SCENE 2: GATE INWARD & SAFETY STOCK
+    // =================================================================
+    function renderGateInward() {
+        const list = document.getElementById("yarnInventoryList");
+        list.innerHTML = "";
+
+        let hasLowStock = false;
+        let lowStockLot = null;
+
+        store.state.batches.forEach(b => {
+            const isLow = b.current_stock_kg < b.safety_stock_threshold_kg;
+            if (isLow) {
+                hasLowStock = true;
+                lowStockLot = b;
+            }
+
+            const item = document.createElement("div");
+            item.className = `yarn-stock-card ${isLow ? 'critical' : ''}`;
+            item.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span class="color-swatch" style="background-color: ${b.color_code}"></span>
+                        <strong style="font-family: var(--font-mono); font-size: 0.95rem; color: #fff;">${b.lot_number}</strong>
+                    </div>
+                    <span class="status-badge ${isLow ? 'IDLE' : 'RUNNING'}">
+                        ${isLow ? '⚠️ REORDER NEEDED' : 'IN STOCK'}
+                    </span>
+                </div>
+                <div style="font-size: 0.8rem; color: var(--text-muted); margin: 0.4rem 0;">
+                    ${b.material_type.replace('_', ' ')} | Supplier: <strong style="color: #fff;">${b.supplier_name}</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.8rem; font-family: var(--font-mono);">
+                    <span>Stock: <strong style="color: ${isLow ? '#fbbf24' : '#34d399'};">${b.current_stock_kg} kg</strong></span>
+                    <span>Safety Min: ${b.safety_stock_threshold_kg} kg</span>
+                    <span>Cost: $${b.cost_per_kg}/kg</span>
+                </div>
+            `;
+            list.appendChild(item);
+        });
+
+        const warningBanner = document.getElementById("safetyStockWarningBanner");
+        const badge = document.getElementById("stockAlertBadge");
+        if (hasLowStock) {
+            warningBanner.style.display = "flex";
+            badge.style.display = "inline-block";
+            document.getElementById("safetyStockWarningDetails").textContent = 
+                `Lot ${lowStockLot.lot_number} current stock is ${lowStockLot.current_stock_kg} kg, which is below the ${lowStockLot.safety_stock_threshold_kg} kg threshold! Immediate reorder notification issued.`;
+        } else {
+            warningBanner.style.display = "none";
+            badge.style.display = "none";
+        }
+    }
+
+    // Scale Weighed Simulation
+    document.getElementById("simulateScaleWeighBtn").addEventListener("click", () => {
+        soundManager.playClick();
+        const randomWeights = [480.5, 520.0, 415.0, 600.0, 390.5];
+        const chosen = randomWeights[Math.floor(Math.random() * randomWeights.length)];
+        document.getElementById("scaleWeightVal").textContent = chosen.toFixed(2);
+        document.getElementById("weightKgInput").value = chosen.toFixed(1);
+    });
+
+    // Inward Form Submission
+    document.getElementById("inwardYarnForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        soundManager.playClick();
+
+        const lotNum = document.getElementById("lotNumberInput").value.trim();
+        const supplier = document.getElementById("supplierNameInput").value.trim();
+        const matType = document.getElementById("materialTypeSelect").value;
+        const color = document.getElementById("colorCodeInput").value;
+        const weight = parseFloat(document.getElementById("weightKgInput").value);
+        const cost = parseFloat(document.getElementById("costPerKgInput").value);
+        const safety = parseFloat(document.getElementById("safetyThresholdInput").value);
+
+        try {
+            const res = await store.addInwardYarn({
+                lot_number: lotNum,
+                supplier_name: supplier,
+                material_type: matType,
+                color_code: color,
+                weight_kg: weight,
+                cost_per_kg: cost,
+                safety_stock_threshold_kg: safety
+            });
+
+            soundManager.playSuccessChime();
+            alert(`✅ Pallet ${lotNum} (${weight} kg) booked into inward ledger!`);
+            document.getElementById("lotNumberInput").value = "";
+            renderGateInward();
+        } catch (err) {
+            soundManager.playAlarmBuzzer();
+            alert(`❌ Inward Booking Error: ${err.message}`);
+        }
+    });
+
+    // =================================================================
+    // SCENE 3: QUALITY CONTROL & ASTM D5430 BENCH
+    // =================================================================
+    function renderQCBench() {
+        const barcode = document.getElementById("qcBarcodeScanInput").value.trim();
+        loadQCBarcodeData(barcode);
+    }
+
+    function loadQCBarcodeData(barcode) {
+        const roll = store.state.rolls.find(r => r.roll_barcode.toUpperCase() === barcode.toUpperCase()) || store.state.rolls[2];
+        if (!roll) return;
+
+        document.getElementById("qcActiveBarcode").textContent = roll.roll_barcode;
+        document.getElementById("qcActiveCurrentStatus").textContent = roll.qc_status;
+        document.getElementById("qcActiveCurrentStatus").className = `status-badge ${roll.qc_status === 'PASSED' ? 'RUNNING' : (roll.qc_status === 'REJECTED' ? 'IDLE' : '')}`;
+        document.getElementById("qcActiveLength").textContent = `${roll.length_meters} m`;
+        document.getElementById("qcActiveWeight").textContent = `${roll.gross_weight_kg} kg`;
+        document.getElementById("qcActiveMachine").textContent = roll.machine_id;
+
+        document.getElementById("qcDefectTypeSelect").value = roll.defect_type || "NONE";
+        document.getElementById("qcDefectPointsInput").value = roll.defect_points || 0;
+
+        // Render Upstream Lineage
+        const trace = store.getUpstreamLineage(roll.roll_barcode);
+        if (trace) {
+            document.getElementById("linOrderNum").textContent = trace.order ? trace.order.order_number : "ORD-2026-081";
+            document.getElementById("linBuyerName").textContent = trace.order ? trace.order.buyer_name : "Zara Sourcing / Inditex";
+            document.getElementById("linFabricSpec").textContent = trace.order ? trace.order.fabric_specification : "60s Combed Cotton Poplin";
+            document.getElementById("linLoomId").textContent = trace.lineage.origin_machine_id;
+            document.getElementById("linOperatorId").textContent = trace.lineage.operator_id;
+            if (trace.lineage.yarn_batch) {
+                document.getElementById("linYarnLot").textContent = trace.lineage.yarn_batch.lot_number;
+            }
+            document.getElementById("linRecommendedAction").textContent = trace.recommended_action;
+        }
+    }
+
+    window.setQcBarcode = (barcode) => {
+        soundManager.playClick();
+        document.getElementById("qcBarcodeScanInput").value = barcode;
+        loadQCBarcodeData(barcode);
+    };
+
+    document.getElementById("loadRollForQcBtn").addEventListener("click", () => {
+        soundManager.playClick();
+        const barcode = document.getElementById("qcBarcodeScanInput").value.trim();
+        loadQCBarcodeData(barcode);
+    });
+
+    // Verdict Handler
+    async function applyQCVerdict(verdict) {
+        soundManager.playClick();
+        const barcode = document.getElementById("qcActiveBarcode").textContent;
+        const defect = document.getElementById("qcDefectTypeSelect").value;
+        const points = parseInt(document.getElementById("qcDefectPointsInput").value, 10);
+
+        try {
+            const res = await store.processQCInspection(barcode, verdict, defect, points, "OP-QC-INSPECTOR");
+            if (verdict === "PASSED") {
+                soundManager.playSuccessChime();
+            } else {
+                soundManager.playAlarmBuzzer();
+            }
+
+            const feedback = document.getElementById("qcResultFeedback");
+            feedback.style.display = "block";
+            feedback.style.background = verdict === "PASSED" ? "rgba(16, 185, 129, 0.2)" : "rgba(239, 68, 68, 0.2)";
+            feedback.style.color = verdict === "PASSED" ? "#34d399" : "#f87171";
+            feedback.innerHTML = `<strong>${verdict} Verdict Applied:</strong> Roll ${barcode} evaluated as ${res.astm_grade} (${points} points). Lineage logged.`;
+
+            loadQCBarcodeData(barcode);
+        } catch (e) {
+            alert(`QC Error: ${e.message}`);
+        }
+    }
+
+    document.getElementById("btnVerdictPass").addEventListener("click", () => applyQCVerdict("PASSED"));
+    document.getElementById("btnVerdictRework").addEventListener("click", () => applyQCVerdict("REWORK"));
+    document.getElementById("btnVerdictReject").addEventListener("click", () => applyQCVerdict("REJECTED"));
+
+    document.getElementById("holdLoomBtn").addEventListener("click", () => {
+        soundManager.playAlarmBuzzer();
+        const loomId = document.getElementById("linLoomId").textContent;
+        alert(`🚨 LOOM CALIBRATION DISPATCHED: Loom ${loomId} placed on electrical & mechanical hold.`);
+    });
+
+    // =================================================================
+    // SCENE 4: TRUCK DISPATCH TERMINAL (ANTI-DOUBLE DISPATCH)
+    // =================================================================
+    function renderDispatchTerminal() {
+        const inv = document.getElementById("dispatchInvoiceInput").value.trim();
+        const manifest = store.getManifest(inv);
+
+        const tbody = document.getElementById("manifestTableBody");
+        tbody.innerHTML = "";
+
+        manifest.rolls.forEach(r => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td><strong style="color: #fff; font-family: var(--font-mono);">${r.roll_barcode}</strong></td>
+                <td>${r.length_meters} m</td>
+                <td>${r.gross_weight_kg} kg</td>
+                <td style="color: var(--text-dim); font-size: 0.75rem;">${new Date(r.dispatched_at).toLocaleTimeString()}</td>
+                <td><span class="status-badge RUNNING">LOADED</span></td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        // Capacity Bar (Max 1500 kg per truck)
+        const pct = Math.min(100, Math.round((manifest.total_weight_kg / 1500) * 100));
+        document.getElementById("truckCapacityFill").style.width = `${pct}%`;
+        document.getElementById("truckCapacityText").textContent = `${manifest.total_weight_kg.toFixed(1)} / 1,500 KG (${pct}%)`;
+    }
+
+    window.setDispatchTestBarcode = (barcode) => {
+        soundManager.playClick();
+        document.getElementById("dispatchBarcodeInput").value = barcode;
+    };
+
+    document.getElementById("dispatchScanForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        soundManager.playClick();
+
+        const barcode = document.getElementById("dispatchBarcodeInput").value.trim();
+        const invoice = document.getElementById("dispatchInvoiceInput").value.trim();
+        const truck = document.getElementById("dispatchTruckInput").value.trim();
+
+        try {
+            const res = await store.dispatchRollToTruck(barcode, truck, invoice);
+            soundManager.playSuccessChime();
+            renderDispatchTerminal();
+            document.getElementById("dispatchBarcodeInput").value = "";
+        } catch (err) {
+            soundManager.playAlarmBuzzer();
+            if (err.message.includes("Double Dispatch Blocked")) {
+                showDoubleDispatchModal(err.message);
+            } else {
+                alert(`❌ Dispatch Blocked: ${err.message}`);
+            }
+        }
+    });
+
+    function showDoubleDispatchModal(msg) {
+        document.getElementById("alarmModalMessage").textContent = msg;
+        document.getElementById("doubleDispatchAlarmModal").classList.add("active");
+    }
+
+    document.getElementById("closeAlarmModalBtn").addEventListener("click", () => {
+        soundManager.playClick();
+        document.getElementById("doubleDispatchAlarmModal").classList.remove("active");
+    });
+
+    // =================================================================
+    // SCENE 5: CUSTOMER ORDER TRACKING (GAP 4 FIX!)
+    // =================================================================
+    async function renderCustomerPortal(orderNumber) {
+        try {
+            const data = await store.trackOrder(orderNumber);
+
+            document.getElementById("custOrderTitle").textContent = `${data.order_number}: ${data.fabric_specification}`;
+            document.getElementById("custBuyerName").textContent = data.buyer_name;
+            document.getElementById("custDeadline").textContent = data.delivery_deadline;
+            document.getElementById("custStatusBadge").textContent = data.order_status.replace('_', ' ');
+
+            // Stepper Nodes
+            const stepper = document.getElementById("custStepperNodes");
+            stepper.innerHTML = "";
+
+            data.milestones.forEach((m, idx) => {
+                const node = document.createElement("div");
+                node.className = `step-node ${m.status.toLowerCase()}`;
+                node.innerHTML = `
+                    <div class="step-circle">${m.status === 'COMPLETED' ? '✓' : idx + 1}</div>
+                    <div class="step-label">${m.label}</div>
+                    <div style="font-size: 0.65rem; color: var(--text-dim); margin-top: 0.2rem;">${m.timestamp || ''}</div>
+                `;
+                stepper.appendChild(node);
+            });
+
+            // Progress Meters
+            document.getElementById("custProgressText").textContent = 
+                `${data.passed_meters.toLocaleString()} / ${data.target_meters.toLocaleString()} METERS (${data.completion_percentage}%)`;
+            document.getElementById("custProgressFill").style.width = `${data.completion_percentage}%`;
+
+            // Quality Certificate
+            document.getElementById("custGradeARate").textContent = `${data.quality_grade_a_rate}%`;
+
+            // Notifications Feed
+            const notifFeed = document.getElementById("custNotificationsFeed");
+            notifFeed.innerHTML = "";
+            if (data.notifications && data.notifications.length) {
+                data.notifications.forEach(n => {
+                    const row = document.createElement("div");
+                    row.style.background = "rgba(0,0,0,0.25)";
+                    row.style.padding = "0.6rem 0.8rem";
+                    row.style.borderRadius = "8px";
+                    row.style.borderLeft = "3px solid #38bdf8";
+                    row.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-dim);">
+                            <span>${n.channel} PUSH ALERT</span>
+                            <span>${new Date(n.sent_at).toLocaleTimeString()}</span>
+                        </div>
+                        <div style="font-size: 0.85rem; color: #fff; margin-top: 0.2rem;">${n.message_body}</div>
+                    `;
+                    notifFeed.appendChild(row);
+                });
+            } else {
+                notifFeed.innerHTML = `<div style="color: var(--text-dim); font-size: 0.85rem;">No customer alerts recorded yet.</div>`;
+            }
+        } catch (e) {
+            alert(`Customer Portal Search: ${e.message}`);
+        }
+    }
+
+    document.getElementById("btnTrackCustOrder").addEventListener("click", () => {
+        soundManager.playClick();
+        const ord = document.getElementById("custOrderSearchInput").value.trim();
+        renderCustomerPortal(ord);
+    });
+
+    window.loadCustomerOrderDemo = (ord) => {
+        soundManager.playClick();
+        document.getElementById("custOrderSearchInput").value = ord;
+        renderCustomerPortal(ord);
+    };
+
+    // =================================================================
+    // SCENE 6: ACTIVITY-BASED COSTING (ABC) ROLLUP
+    // =================================================================
+    async function renderFinancialRollup(orderId) {
+        try {
+            const data = await store.getOrderCosting(orderId);
+
+            document.getElementById("abcGrossMarginPct").textContent = `${data.gross_margin_percentage}%`;
+            document.getElementById("abcUnitCost").textContent = `$${data.final_cost_per_meter.toFixed(2)} / m`;
+            document.getElementById("abcContractPrice").textContent = `$${data.contract_price_per_meter.toFixed(2)} / m`;
+
+            document.getElementById("abcTotalCostVal").textContent = `$${data.total_manufacturing_cost.toLocaleString()}`;
+            document.getElementById("abcRevenueVal").textContent = `$${data.revenue.toLocaleString()}`;
+
+            // Waterfall Chart
+            const waterfallCont = document.getElementById("waterfallContainer");
+            waterfallCont.innerHTML = "";
+
+            const maxAmount = Math.max(...data.cost_waterfall.map(x => x.amount), data.revenue);
+
+            data.cost_waterfall.forEach(item => {
+                const row = document.createElement("div");
+                row.className = "waterfall-row";
+
+                const widthPct = Math.min(100, Math.max(5, (item.amount / maxAmount) * 100));
+                let barClass = "cost";
+                if (item.name.includes("Loom")) barClass = "overhead";
+                if (item.name.includes("Scrap")) barClass = "scrap";
+                if (item.type === "total_cost") barClass = "total";
+                if (item.type === "profit" || item.type === "revenue") barClass = "profit";
+
+                row.innerHTML = `
+                    <div class="waterfall-label">${item.name}</div>
+                    <div class="waterfall-bar-track">
+                        <div class="waterfall-bar-val ${barClass}" style="width: ${widthPct}%;">
+                            $${item.amount.toLocaleString()}
+                        </div>
+                    </div>
+                `;
+                waterfallCont.appendChild(row);
+            });
+        } catch (e) {
+            console.error("Costing Rollup error:", e);
+        }
+    }
+
+    document.getElementById("costingOrderSelect").addEventListener("change", (e) => {
+        soundManager.playClick();
+        renderFinancialRollup(e.target.value);
+    });
+});

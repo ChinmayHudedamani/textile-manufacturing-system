@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Everest Textile Manufacturing System (ETMS) - Enterprise HUD</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧵</text></svg>">
+</head>
+<body>
+
+  <!-- TOP STATUS & SYSTEM HUD -->
+  <header class="mill-header">
+    <div class="brand-section">
+      <div class="brand-logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      </div>
+      <div class="brand-text">
+        <h1>EVEREST TEXTILE MILLS</h1>
+        <p>Enterprise Technical Manual & System Architecture (ETMS v2.0)</p>
+      </div>
+    </div>
+
+    <div class="hud-pills">
+      <div class="hud-pill">
+        <span class="dot-pulse" id="backendPulse"></span>
+        <span>EDGE MESH: <strong id="edgeStatusText">ONLINE</strong></span>
+      </div>
+      <div class="hud-pill">
+        <span>LOOM PICKS/SEC: <strong id="globalPickRate">96 PPS</strong></span>
+      </div>
+      <div class="hud-pill">
+        <span>RUNNING LOOMS: <strong id="activeLoomsCount">6 / 8</strong></span>
+      </div>
+      <button class="btn btn-ghost" id="soundToggleBtn" style="padding: 0.35rem 0.75rem; font-size: 0.75rem;">
+        🔊 AUDIO: ON
+      </button>
+    </div>
+  </header>
+
+  <!-- NAVIGATION BAR (THE 6 OPERATIONAL SCENES) -->
+  <nav class="mill-nav">
+    <button class="nav-tab active" data-scene="scene-floor">
+      <span>🏭</span> 1. Production Floor HUD
+    </button>
+    <button class="nav-tab" data-scene="scene-gate">
+      <span>⚖️</span> 2. Gate Inward & Raw Stock
+      <span class="nav-badge" id="stockAlertBadge" style="display:none;">ALERT</span>
+    </button>
+    <button class="nav-tab" data-scene="scene-qc">
+      <span>🔍</span> 3. Quality Control (ASTM D5430)
+    </button>
+    <button class="nav-tab" data-scene="scene-dispatch">
+      <span>🚚</span> 4. Truck Dispatch Terminal
+    </button>
+    <button class="nav-tab" data-scene="scene-customer">
+      <span>📱</span> 5. Customer Tracking Portal
+      <span class="nav-badge new">GAP 4 FIX</span>
+    </button>
+    <button class="nav-tab" data-scene="scene-financial">
+      <span>📊</span> 6. Financial Closing & ABC Costing
+    </button>
+  </nav>
+
+  <!-- MAIN SCENE CONTAINER -->
+  <main class="main-viewport">
+
+    <!-- ===================================================================
+         SCENE 1: PRODUCTION FLOOR HUD & LOOM TELEMETRY
+         =================================================================== -->
+    <section id="scene-floor" class="scene-view active">
+      <div class="scene-header">
+        <div class="scene-title">
+          <h2>Shop Floor Live Telemetry & Machine Registry</h2>
+          <p>Real-time edge pick sensor pulses, optical vibration analysis, and 120s idle thresholds</p>
+        </div>
+        <div class="scene-actions">
+          <button class="btn btn-primary" id="triggerPulseBtn">
+            ⚡ Pulse Telemetry Tick (+12 Picks)
+          </button>
+        </div>
+      </div>
+
+      <!-- Overall Equipment Effectiveness (OEE) Metric Strip -->
+      <div class="grid-4" style="margin-bottom: 1.5rem;">
+        <div class="glass-panel" style="padding: 1rem;">
+          <div class="form-label">Plant OEE Score</div>
+          <div style="font-family: var(--font-display); font-size: 1.8rem; font-weight: 800; color: #34d399;">88.4%</div>
+          <div style="font-size: 0.75rem; color: var(--text-dim);">Availability: 92% | Quality: 96%</div>
+        </div>
+        <div class="glass-panel" style="padding: 1rem;">
+          <div class="form-label">Cumulative Picks Today</div>
+          <div style="font-family: var(--font-mono); font-size: 1.8rem; font-weight: 700; color: #38bdf8;" id="totalPicksDisplay">1,517,412</div>
+          <div style="font-size: 0.75rem; color: var(--text-dim);">Across 6 operational weaving machines</div>
+        </div>
+        <div class="glass-panel" style="padding: 1rem;">
+          <div class="form-label">Power Demand</div>
+          <div style="font-family: var(--font-mono); font-size: 1.8rem; font-weight: 700; color: #fbbf24;" id="totalPowerAmps">103.5 A</div>
+          <div style="font-size: 0.75rem; color: var(--text-dim);">Active shop floor current draw</div>
+        </div>
+        <div class="glass-panel" style="padding: 1rem;">
+          <div class="form-label">Idle Capacity Alerts</div>
+          <div style="font-family: var(--font-display); font-size: 1.8rem; font-weight: 800; color: #f87171;" id="idleAlertsCount">1 Machine</div>
+          <div style="font-size: 0.75rem; color: var(--text-dim);">Unmonitored idle > 120 seconds</div>
+        </div>
+      </div>
+
+      <!-- Floor Stage Sections -->
+      <div class="floor-map-container">
+        <!-- 1. Spinning Stage -->
+        <div class="floor-stage-label">Section 1: Spinning & Preparatory Frames (RS-485 / Modbus)</div>
+        <div class="grid-2" id="spinningMachinesContainer" style="margin-bottom: 1.5rem;"></div>
+
+        <!-- 2. Weaving Shed -->
+        <div class="floor-stage-label">Section 2: Weaving Looms (High-Speed Airjets / Optical Pick Sensors)</div>
+        <div class="grid-4" id="weavingMachinesContainer" style="margin-bottom: 1.5rem;"></div>
+
+        <!-- 3. Dyeing Vats -->
+        <div class="floor-stage-label">Section 3: Dyeing & Finishing Vats (Temperature & Viscosity Probes)</div>
+        <div class="grid-2" id="dyeingMachinesContainer"></div>
+      </div>
+
+      <!-- Interactive Edge Telemetry Simulator Bar -->
+      <div class="sim-control-bar">
+        <div class="sim-info">
+          <div style="font-size: 1.25rem;">🎛️</div>
+          <div>
+            <div style="font-weight: 700; font-size: 0.9rem;">C++20 Native Edge Daemon Ingestion Simulator</div>
+            <div style="font-size: 0.75rem; color: var(--text-dim);">Pushes zero-allocation circular buffer samples to MQTT mesh or REST endpoint</div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+          <button class="btn btn-ghost" id="toggleBenchmarkLoomBtn">
+            Toggle Loom WEAVE-LOOM-04 (Running/Idle)
+          </button>
+          <button class="btn btn-primary" id="autoSimulateBtn">
+            ▶ Start Auto-Loop (1s Interval)
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         SCENE 2: GATE INWARD & RAW MATERIAL INTAKE
+         =================================================================== -->
+    <section id="scene-gate" class="scene-view">
+      <div class="scene-header">
+        <div class="scene-title">
+          <h2>Gate Inward Intake & Safety Stock Ledger</h2>
+          <p>Yarn intake reconciliation with digital floor scale integration and reorder alerts</p>
+        </div>
+      </div>
+
+      <!-- Active Warning Banner for Low Stock -->
+      <div id="safetyStockWarningBanner" class="stock-warning-banner" style="display:none;">
+        <span style="font-size: 1.25rem;">⚠️</span>
+        <div>
+          <strong>CRITICAL SAFETY STOCK THRESHOLD TRIGGERED:</strong> 
+          <span id="safetyStockWarningDetails">Lot LOT-POLY-401 current balance is 185 kg (Safety threshold: 250 kg). Reorder notification dispatched to mill office.</span>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <!-- Inward Entry Form -->
+        <div class="glass-panel">
+          <h3 style="margin-bottom: 1rem; font-family: var(--font-display);">Register Inward Yarn Pallet</h3>
+
+          <!-- Digital Scale Simulator -->
+          <div class="pallet-scale-box">
+            <div class="form-label">Digital Platform Floor Scale</div>
+            <div>
+              <span class="scale-weight-display" id="scaleWeightVal">450.00</span>
+              <span class="scale-unit">KG NET</span>
+            </div>
+            <button class="btn btn-ghost" id="simulateScaleWeighBtn" style="margin-top: 0.75rem; font-size: 0.75rem;">
+              ⚖️ Re-Weigh Next Pallet (+/- 50kg)
+            </button>
+          </div>
+
+          <form id="inwardYarnForm">
+            <div class="grid-2" style="gap: 0.75rem;">
+              <div class="form-group">
+                <label class="form-label">Yarn Lot / Challan #</label>
+                <input type="text" id="lotNumberInput" class="form-input mono" placeholder="e.g. LOT-COTTON-995" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Supplier Name</label>
+                <input type="text" id="supplierNameInput" class="form-input" placeholder="e.g. Gujarat Agro Fibers" required>
+              </div>
+            </div>
+
+            <div class="grid-2" style="gap: 0.75rem;">
+              <div class="form-group">
+                <label class="form-label">Fiber Blend Type</label>
+                <select id="materialTypeSelect" class="form-select">
+                  <option value="COTTON_COMBED">Cotton Combed (60s Ne)</option>
+                  <option value="POLYESTER_FILAMENT">Polyester Filament (75D)</option>
+                  <option value="VISCOSE_RAYON">Viscose Rayon (30s Ne)</option>
+                  <option value="SPUN_BLEND">Spun Blend (Poly/Cotton 65/35)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Color Code</label>
+                <input type="color" id="colorCodeInput" class="form-input" value="#2563EB" style="height: 44px; padding: 4px;">
+              </div>
+            </div>
+
+            <div class="grid-2" style="gap: 0.75rem;">
+              <div class="form-group">
+                <label class="form-label">Inward Weight (kg)</label>
+                <input type="number" step="0.1" id="weightKgInput" class="form-input mono" value="450.0" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Unit Cost ($ / kg)</label>
+                <input type="number" step="0.01" id="costPerKgInput" class="form-input mono" value="4.25" required>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Safety Stock Threshold (kg)</label>
+              <input type="number" step="1" id="safetyThresholdInput" class="form-input mono" value="250.0">
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">
+              📥 Book Pallet into Raw Material Ledger
+            </button>
+          </form>
+        </div>
+
+        <!-- Current Inventory & Lot QR Labels -->
+        <div class="glass-panel">
+          <h3 style="margin-bottom: 1rem; font-family: var(--font-display);">Raw Yarn Storage Ledger</h3>
+          <div id="yarnInventoryList" style="display: flex; flex-direction: column; gap: 0.75rem; max-height: 520px; overflow-y: auto;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         SCENE 3: QUALITY CONTROL & ASTM D5430 BENCH
+         =================================================================== -->
+    <section id="scene-qc" class="scene-view">
+      <div class="scene-header">
+        <div class="scene-title">
+          <h2>Quality Control & ASTM D5430 4-Point Roll Grading</h2>
+          <p>Scan fabric rolls, calculate penalty scores, and perform root-cause lineage back to loom and yarn batch</p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <!-- Inspection Terminal -->
+        <div class="glass-panel">
+          <h3 style="margin-bottom: 1rem; font-family: var(--font-display);">Inspection Bench Terminal</h3>
+          
+          <div class="form-group">
+            <label class="form-label">Scan Fabric Roll Barcode / QR</label>
+            <div style="display: flex; gap: 0.5rem;">
+              <input type="text" id="qcBarcodeScanInput" class="form-input mono" placeholder="Scan or enter ROLL-..." value="ROLL-081-PENDING-03" style="font-size: 1.1rem;">
+              <button class="btn btn-primary" id="loadRollForQcBtn">Load</button>
+            </div>
+            <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+              <button class="btn btn-ghost" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;" onclick="setQcBarcode('ROLL-081-PENDING-03')">Sample: ROLL-081-PENDING-03</button>
+              <button class="btn btn-ghost" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;" onclick="setQcBarcode('ROLL-081-REJECTED-04')">Sample: ROLL-081-REJECTED-04</button>
+            </div>
+          </div>
+
+          <div id="activeRollInspectCard" style="background: rgba(0,0,0,0.25); padding: 1rem; border-radius: 8px; margin: 1rem 0;">
+            <div style="display: flex; justify-content: space-between;">
+              <span style="font-family: var(--font-mono); font-weight: 700; color: #38bdf8;" id="qcActiveBarcode">ROLL-081-PENDING-03</span>
+              <span class="status-badge" id="qcActiveCurrentStatus">PENDING</span>
+            </div>
+            <div style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-muted);">
+              Length: <strong style="color:#fff;" id="qcActiveLength">135.0 m</strong> | 
+              Weight: <strong style="color:#fff;" id="qcActiveWeight">29.7 kg</strong> | 
+              Source Loom: <strong style="color:#38bdf8;" id="qcActiveMachine">WEAVE-LOOM-04</strong>
+            </div>
+          </div>
+
+          <!-- ASTM 4-Point Defect Grader -->
+          <div class="grid-2" style="gap: 0.75rem;">
+            <div class="form-group">
+              <label class="form-label">Defect Classification</label>
+              <select id="qcDefectTypeSelect" class="form-select">
+                <option value="NONE">None (Clean Fabric)</option>
+                <option value="HOLE">Hole / Cut (3-4 Points)</option>
+                <option value="UNEVEN_WEAVING">Uneven Weft / Tension (2-4 Points)</option>
+                <option value="COLOR_MISMATCH">Color Shade Mismatch (3 Points)</option>
+                <option value="SLUB">Slub / Thick Yarn (1-2 Points)</option>
+                <option value="OIL_STAIN">Loom Oil Stain (2-4 Points)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">ASTM Penalty Points</label>
+              <input type="number" id="qcDefectPointsInput" class="form-input mono" value="0" min="0" max="40">
+            </div>
+          </div>
+
+          <!-- Verdict Actions -->
+          <div class="form-label">Inspection Verdict</div>
+          <div class="qc-verdict-grid">
+            <button class="verdict-btn pass" id="btnVerdictPass">
+              ✅ PASS<br><small style="font-size:0.7rem; font-weight:normal;">Grade A / B</small>
+            </button>
+            <button class="verdict-btn rework" id="btnVerdictRework">
+              ⚠️ REWORK<br><small style="font-size:0.7rem; font-weight:normal;">Finishing Batch</small>
+            </button>
+            <button class="verdict-btn reject" id="btnVerdictReject">
+              ❌ REJECT<br><small style="font-size:0.7rem; font-weight:normal;">Scrap Loss</small>
+            </button>
+          </div>
+
+          <div id="qcResultFeedback" style="display:none; padding: 0.75rem; border-radius: 8px; font-size: 0.85rem; margin-top: 1rem;"></div>
+        </div>
+
+        <!-- Upstream Root-Cause Lineage Trace -->
+        <div class="glass-panel">
+          <h3 style="margin-bottom: 0.5rem; font-family: var(--font-display);">Upstream Root-Cause Lineage</h3>
+          <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 1rem;">
+            Instantly traces any roll back to its originating machine, shift operator, and yarn delivery lot
+          </p>
+
+          <div class="lineage-trace-box" id="lineageDisplayBox">
+            <div class="lineage-step">
+              <span class="lineage-badge">ORDER</span>
+              <div>
+                <strong id="linOrderNum">ORD-2026-081</strong> - <span id="linBuyerName">Zara Sourcing / Inditex</span>
+                <div style="font-size: 0.75rem; color: var(--text-dim);" id="linFabricSpec">60s Combed Cotton Poplin</div>
+              </div>
+            </div>
+
+            <div class="lineage-step">
+              <span class="lineage-badge">LOOM</span>
+              <div>
+                <strong id="linLoomId">WEAVE-LOOM-04</strong> (Airjet High-Speed Loom)
+                <div style="font-size: 0.75rem; color: var(--text-dim);">Operating at 740 Picks/Min</div>
+              </div>
+            </div>
+
+            <div class="lineage-step">
+              <span class="lineage-badge">OPERATOR</span>
+              <div>
+                Shift Operator: <strong id="linOperatorId">OP-812</strong>
+                <div style="font-size: 0.75rem; color: var(--text-dim);">Shift: Morning (06:00 - 14:00)</div>
+              </div>
+            </div>
+
+            <div class="lineage-step">
+              <span class="lineage-badge">YARN LOT</span>
+              <div>
+                Batch: <strong id="linYarnLot">LOT-COTTON-992</strong> (Gujarat Agro Fibers)
+                <div style="font-size: 0.75rem; color: var(--text-dim);">Fiber: Cotton Combed 60s</div>
+              </div>
+            </div>
+
+            <div style="margin-top: 1rem; padding: 0.75rem; background: rgba(0,0,0,0.3); border-radius: 8px;">
+              <div class="form-label" style="margin-bottom: 0.2rem;">Recommended Corrective Action</div>
+              <div id="linRecommendedAction" style="font-size: 0.85rem; color: #38bdf8;">
+                Parameters verified within tolerance limits.
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top: 1rem;">
+            <button class="btn btn-ghost" id="holdLoomBtn" style="width: 100%;">
+              🛑 Hold Loom & Dispatch Calibration Maintenance Alert
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         SCENE 4: TRUCK DISPATCH TERMINAL (ANTI-DOUBLE DISPATCH)
+         =================================================================== -->
+    <section id="scene-dispatch" class="scene-view">
+      <div class="scene-header">
+        <div class="scene-title">
+          <h2>Warehouse Truck Loading & Anti-Double Dispatch Terminal</h2>
+          <p>Scan-to-truck verification with hardware concurrency locks and offline synchronization</p>
+        </div>
+        <div class="scene-actions">
+          <button class="btn btn-ghost" id="toggleOfflineSimBtn">
+            📶 OFFLINE QUEUE: READY
+          </button>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <!-- Scan Terminal -->
+        <div class="glass-panel">
+          <h3 style="margin-bottom: 1rem; font-family: var(--font-display);">Loading Dock Manifest Terminal</h3>
+
+          <div style="background: rgba(6, 182, 212, 0.08); border: 1px solid var(--border-glow); padding: 1rem; border-radius: 10px; margin-bottom: 1.25rem;">
+            <div class="grid-2" style="gap: 1rem;">
+              <div>
+                <div class="form-label">Assigned Invoice Number</div>
+                <input type="text" id="dispatchInvoiceInput" class="form-input mono" value="INV-2026-001" style="font-weight: 700;">
+              </div>
+              <div>
+                <div class="form-label">Vehicle License Plate</div>
+                <input type="text" id="dispatchTruckInput" class="form-input mono" value="KA-01-E-9002" style="font-weight: 700;">
+              </div>
+            </div>
+          </div>
+
+          <!-- Truck Capacity Bar -->
+          <div style="margin-bottom: 1.25rem;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; font-family: var(--font-mono);">
+              <span style="color: var(--text-dim);">TRUCK CARGO WEIGHT CAPACITY</span>
+              <span id="truckCapacityText">170.8 / 1,500 KG (11%)</span>
+            </div>
+            <div class="truck-capacity-bar">
+              <div class="truck-capacity-fill" id="truckCapacityFill" style="width: 11%;"></div>
+            </div>
+          </div>
+
+          <!-- Barcode Scanner Input Form -->
+          <form id="dispatchScanForm">
+            <div class="form-group">
+              <label class="form-label">Scan Fabric Roll Barcode / QR</label>
+              <div style="display: flex; gap: 0.5rem;">
+                <input type="text" id="dispatchBarcodeInput" class="form-input mono" placeholder="Scan roll barcode..." value="ROLL-094-PASS-01" style="font-size: 1.15rem;" autofocus>
+                <button type="submit" class="btn btn-primary" id="btnCommitDispatch">Commit Scan</button>
+              </div>
+            </div>
+          </form>
+
+          <!-- Interactive Test Invariant Scenarios -->
+          <div style="margin-top: 1rem; background: rgba(0,0,0,0.3); padding: 0.85rem; border-radius: 8px;">
+            <div class="form-label" style="margin-bottom: 0.4rem;">Test Invariant Verification Quick Clicks</div>
+            <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+              <button class="btn btn-ghost" style="justify-content: flex-start; font-size: 0.75rem;" onclick="setDispatchTestBarcode('ROLL-094-PASS-01')">
+                ✅ <strong>Valid Scan:</strong> ROLL-094-PASS-01 (Passed QC ➔ Commits to manifest)
+              </button>
+              <button class="btn btn-ghost" style="justify-content: flex-start; font-size: 0.75rem;" onclick="setDispatchTestBarcode('ROLL-081-PENDING-03')">
+                ❌ <strong>Uninspected Roll:</strong> ROLL-081-PENDING-03 (Blocks dispatch ➔ Status PENDING)
+              </button>
+              <button class="btn btn-ghost" style="justify-content: flex-start; font-size: 0.75rem; border-color: rgba(239, 68, 68, 0.4);" onclick="setDispatchTestBarcode('ROLL-081-DISPATCHED-02')">
+                🚨 <strong>Double Dispatch:</strong> ROLL-081-DISPATCHED-02 (Triggers Klaxon Alarm ➔ Already Loaded!)
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Manifest Loading History -->
+        <div class="glass-panel">
+          <h3 style="margin-bottom: 1rem; font-family: var(--font-display);">Manifest Loading History (Invoice INV-2026-001)</h3>
+          <div style="max-height: 480px; overflow-y: auto;">
+            <table class="manifest-log-table">
+              <thead>
+                <tr>
+                  <th>ROLL BARCODE</th>
+                  <th>LENGTH</th>
+                  <th>WEIGHT</th>
+                  <th>LOADED AT</th>
+                  <th>STATUS</th>
+                </tr>
+              </thead>
+              <tbody id="manifestTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         SCENE 5: CUSTOMER ORDER TRACKING PORTAL (GAP 4 FIX!)
+         =================================================================== -->
+    <section id="scene-customer" class="scene-view">
+      <div class="scene-header">
+        <div class="scene-title">
+          <h2>Customer Self-Service Order Tracking & Quality Portal</h2>
+          <p>Permanently eliminates supervisor telephone calls with real-time milestone transparency</p>
+        </div>
+      </div>
+
+      <!-- Order Search Bar -->
+      <div class="glass-panel" style="margin-bottom: 1.5rem;">
+        <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+          <div style="flex: 1; min-width: 280px;">
+            <label class="form-label">Enter Purchase Order Number</label>
+            <input type="text" id="custOrderSearchInput" class="form-input mono" value="ORD-2026-081" style="font-size: 1.1rem; font-weight: 700;">
+          </div>
+          <button class="btn btn-primary" id="btnTrackCustOrder" style="margin-top: 1.25rem;">
+            🔍 Track Order Progress
+          </button>
+          <div style="margin-top: 1.25rem; display: flex; gap: 0.5rem;">
+            <button class="btn btn-ghost" style="font-size: 0.8rem;" onclick="loadCustomerOrderDemo('ORD-2026-081')">Zara Inditex</button>
+            <button class="btn btn-ghost" style="font-size: 0.8rem;" onclick="loadCustomerOrderDemo('ORD-2026-094')">Marks & Spencer</button>
+            <button class="btn btn-ghost" style="font-size: 0.8rem;" onclick="loadCustomerOrderDemo('ORD-2026-102')">Arvind Export</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Production Stepper -->
+      <div class="glass-panel" style="margin-bottom: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <h3 style="font-family: var(--font-display);" id="custOrderTitle">ORD-2026-081: 60s Combed Cotton Poplin</h3>
+          <span class="status-badge RUNNING" id="custStatusBadge">WEAVING ACTIVE</span>
+        </div>
+        <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">
+          Buyer: <strong id="custBuyerName" style="color:#fff;">Zara Sourcing / Inditex</strong> | 
+          Delivery Deadline: <strong id="custDeadline" style="color:#fff;">Nov 15, 2026</strong>
+        </div>
+
+        <!-- Milestones Stepper -->
+        <div class="customer-stepper" id="custStepperNodes"></div>
+
+        <!-- Progress Gauge -->
+        <div style="margin-top: 1rem;">
+          <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-family: var(--font-mono); margin-bottom: 0.4rem;">
+            <span>FABRIC PRODUCED & PASSED</span>
+            <span id="custProgressText">3,450 / 5,000 METERS (69.0%)</span>
+          </div>
+          <div style="background: rgba(0,0,0,0.3); height: 16px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border-subtle);">
+            <div id="custProgressFill" style="background: linear-gradient(90deg, #0284c7, #38bdf8); height: 100%; width: 69%; transition: width 0.6s ease;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <!-- Quality Certificate & Lab Assurance -->
+        <div class="quality-certificate-card">
+          <div class="cert-stamp">VERIFIED ASTM GRADE A</div>
+          <h3 style="font-family: var(--font-display); color: #fff; margin-bottom: 0.5rem;">Digital Fabric Quality Certificate</h3>
+          <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 1.25rem;">Certified by Everest Textile Testing & Standards Laboratory</p>
+
+          <div class="grid-2" style="gap: 1rem; margin-bottom: 1.25rem;">
+            <div>
+              <div class="form-label">Grade A Compliance Rate</div>
+              <div style="font-family: var(--font-display); font-size: 1.75rem; font-weight: 700; color: #34d399;" id="custGradeARate">98.4%</div>
+            </div>
+            <div>
+              <div class="form-label">Avg Defect Points / 100m²</div>
+              <div style="font-family: var(--font-display); font-size: 1.75rem; font-weight: 700; color: #38bdf8;" id="custDefectPointsRate">2.1 pts</div>
+            </div>
+          </div>
+
+          <div style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.5;">
+            All fabric rolls are tested under ISO 13934-1 tensile specifications and ASTM D5430 4-point visual defect standards.
+          </div>
+        </div>
+
+        <!-- Automated Notification Feed -->
+        <div class="glass-panel">
+          <h3 style="font-family: var(--font-display); margin-bottom: 0.75rem;">Automated Milestone Updates Log</h3>
+          <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 1rem;">
+            Real-time push notifications emitted to the buyer via Portal, SMS, and Email
+          </p>
+          <div id="custNotificationsFeed" style="display: flex; flex-direction: column; gap: 0.75rem; max-height: 280px; overflow-y: auto;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         SCENE 6: ACTIVITY-BASED COSTING ROLLUP
+         =================================================================== -->
+    <section id="scene-financial" class="scene-view">
+      <div class="scene-header">
+        <div class="scene-title">
+          <h2>Activity-Based Costing (ABC) & Financial Closing</h2>
+          <p>Live job costing rolling up raw materials, shift wages, loom depreciation, and defect scrap loss</p>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-bottom: 1.5rem;">
+        <!-- Profit Margin Speedometer -->
+        <div class="margin-hero-box">
+          <div class="form-label" style="letter-spacing: 0.08em;">CONTRACT GROSS PROFIT MARGIN</div>
+          <div class="margin-stat" id="abcGrossMarginPct">22.7%</div>
+          <div style="font-size: 0.95rem; color: var(--text-muted); margin-top: 0.5rem;">
+            True Manufacturing Cost: <strong style="color:#fff;" id="abcUnitCost">$37.51 / m</strong> | 
+            Contract Price: <strong style="color:#38bdf8;" id="abcContractPrice">$48.50 / m</strong>
+          </div>
+        </div>
+
+        <!-- Order Selector -->
+        <div class="glass-panel">
+          <h3 style="font-family: var(--font-display); margin-bottom: 0.75rem;">Select Purchase Order for Financial Audit</h3>
+          <select id="costingOrderSelect" class="form-select" style="font-size: 1rem; margin-bottom: 1rem;">
+            <option value="ord-zara-081">ORD-2026-081 - Zara Inditex (5,000m Poplin)</option>
+            <option value="ord-ms-094">ORD-2026-094 - Marks & Spencer (2,500m Twill)</option>
+            <option value="ord-arvind-102">ORD-2026-102 - Arvind Mills Export (8,000m Sheeting)</option>
+          </select>
+
+          <div class="grid-2" style="gap: 0.75rem;">
+            <div style="background: rgba(0,0,0,0.25); padding: 0.75rem; border-radius: 8px;">
+              <div class="form-label">Total Manufacturing Cost</div>
+              <div style="font-family: var(--font-mono); font-size: 1.35rem; font-weight: 700; color: #f87171;" id="abcTotalCostVal">$129,415</div>
+            </div>
+            <div style="background: rgba(0,0,0,0.25); padding: 0.75rem; border-radius: 8px;">
+              <div class="form-label">Contract Revenue</div>
+              <div style="font-family: var(--font-mono); font-size: 1.35rem; font-weight: 700; color: #34d399;" id="abcRevenueVal">$167,325</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Activity-Based Cost Waterfall Chart -->
+      <div class="glass-panel">
+        <h3 style="font-family: var(--font-display); margin-bottom: 0.5rem;">Activity-Based Cost Breakdown Waterfall</h3>
+        <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 1.5rem;">
+          Dynamic formula: Actual Cost = (Direct Yarn Consumed + Logged Wages + Loom Energy & Overhead + Scrap Loss) / Passed Meters
+        </p>
+
+        <div class="waterfall-bar-container" id="waterfallContainer"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- CRITICAL DOUBLE-DISPATCH ALARM MODAL -->
+  <div class="alarm-overlay" id="doubleDispatchAlarmModal">
+    <div class="alarm-card">
+      <div class="alarm-icon">
+        <svg viewBox="0 0 24 24" width="36" height="36" fill="currentColor">
+          <path d="M12 2L1 21h22L12 2zm0 3.5l8.5 14.5H3.5L12 5.5zM11 10v4h2v-4h-2zm0 6v2h2v-2h-2z"/>
+        </svg>
+      </div>
+      <h2 style="font-family: var(--font-display); color: #f87171; font-size: 1.6rem; margin-bottom: 0.5rem;">
+        CRITICAL: DOUBLE DISPATCH BLOCKED!
+      </h2>
+      <p style="color: #fca5a5; font-size: 0.95rem; line-height: 1.5; margin-bottom: 1.5rem;" id="alarmModalMessage">
+        Roll ROLL-081-DISPATCHED-02 was already scanned and loaded onto Truck KA-01-E-9002 under Invoice INV-2026-001. Physical gate lock engaged.
+      </p>
+      <button class="btn btn-danger" style="width: 100%; font-size: 1rem; padding: 0.85rem;" id="closeAlarmModalBtn">
+        Acknowledge & Clear Security Alarm
+      </button>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script src="js/sound.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
