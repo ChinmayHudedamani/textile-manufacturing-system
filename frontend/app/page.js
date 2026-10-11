@@ -28,6 +28,10 @@ export default function EverestTextileERP() {
   const [notification, setNotification] = useState(null);
   const [currentShift, setCurrentShift] = useState("Shift A (06:00 - 14:00)");
 
+  // Role-Based Access Control & Persona State
+  const [currentRole, setCurrentRole] = useState("admin"); // "admin" | "owner" | "floor_supervisor" | "customer"
+  const [roleModalOpen, setRoleModalOpen] = useState(true); // Open on launch as requested!
+
   // Architecture Inspector Drawer State
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [archContext, setArchContext] = useState({
@@ -200,12 +204,28 @@ export default function EverestTextileERP() {
         const data = await res.json();
         setOrders(data);
         if (data.length > 0 && !trackedOrder) {
-          const match = data.find((o) => o.order_number === orderQuery) || data[0];
-          setTrackedOrder(match);
+          const initialTarget = data.find((o) => o.order_number === orderQuery) || data[0];
+          fetchOrderTrackDetails(initialTarget.order_number);
         }
       }
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const fetchOrderTrackDetails = async (orderNum) => {
+    try {
+      const res = await fetch(`${API_BASE}/orders/track/${encodeURIComponent(orderNum)}`);
+      if (res.ok) {
+        const fullData = await res.json();
+        setTrackedOrder(fullData);
+        setOrderQuery(fullData.order_number);
+      } else {
+        const match = orders.find((o) => o.order_number === orderNum);
+        if (match) setTrackedOrder(match);
+      }
+    } catch (err) {
+      console.error("Error fetching order tracking details:", err);
     }
   };
 
@@ -704,6 +724,32 @@ GROUP BY o.order_id;`,
         </div>
 
         <div className="header-status-cluster">
+          {/* Active Role Switcher Pill */}
+          <button
+            onClick={() => setRoleModalOpen(true)}
+            style={{
+              background: currentRole === "owner" ? "linear-gradient(135deg, rgba(234, 179, 8, 0.25), rgba(202, 138, 4, 0.3))" :
+                          currentRole === "customer" ? "linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(14, 165, 233, 0.3))" :
+                          currentRole === "floor_supervisor" ? "linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(5, 150, 105, 0.3))" :
+                          "linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(79, 70, 229, 0.3))",
+              border: `1px solid ${currentRole === "owner" ? "#eab308" : currentRole === "customer" ? "#38bdf8" : currentRole === "floor_supervisor" ? "#10b981" : "#818cf8"}`,
+              color: "#fff",
+              padding: "6px 14px",
+              borderRadius: "9999px",
+              fontSize: "0.82rem",
+              fontWeight: 800,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              boxShadow: "0 2px 10px rgba(0,0,0,0.3)"
+            }}
+          >
+            <span>👤</span>
+            <span>Role: {currentRole === "owner" ? "Mill Owner" : currentRole === "customer" ? "Customer / Buyer" : currentRole === "floor_supervisor" ? "Floor Supervisor" : "System Admin"}</span>
+            <span style={{ fontSize: "0.68rem", opacity: 0.8 }}>▼</span>
+          </button>
+
           <div className="digital-clock-chip">{currentTime || "00:00:00 IST"}</div>
           <div className="judge-mode-badge">{currentShift.split(" ")[0]} Active</div>
           <div className={`status-indicator-pill ${backendStatus === "CONNECTED" ? "status-online" : "status-offline"}`}>
@@ -713,68 +759,224 @@ GROUP BY o.order_id;`,
         </div>
       </header>
 
+      {/* Role Selection Modal on launch or when switching */}
+      {roleModalOpen && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(5, 10, 24, 0.85)", backdropFilter: "blur(12px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1200 }}>
+          <div className="glass-panel" style={{ width: "680px", maxWidth: "92vw", border: "1px solid rgba(255,255,255,0.15)", boxShadow: "0 20px 60px rgba(0,0,0,0.8)" }}>
+            <div style={{ textAlign: "center", marginBottom: "22px" }}>
+              <div style={{ display: "inline-flex", padding: "10px", borderRadius: "14px", background: "linear-gradient(135deg, #6366f1, #38bdf8)", marginBottom: "10px" }}>
+                <span style={{ fontSize: "1.8rem" }}>🏭</span>
+              </div>
+              <h2 style={{ fontSize: "1.5rem", fontWeight: 800, color: "#fff", marginBottom: "4px" }}>
+                Select User Workspace Persona
+              </h2>
+              <p style={{ fontSize: "0.88rem", color: "var(--text-muted)" }}>
+                Experience Everest Textile Mills ERP customized for specific industrial operations and stakeholders:
+              </p>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "20px" }}>
+              {/* Option 1: Mill Owner */}
+              <div
+                style={{
+                  background: currentRole === "owner" ? "rgba(234, 179, 8, 0.15)" : "rgba(15, 23, 42, 0.6)",
+                  border: `1.5px solid ${currentRole === "owner" ? "#eab308" : "rgba(255,255,255,0.08)"}`,
+                  borderRadius: "12px",
+                  padding: "16px",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease"
+                }}
+                onClick={() => {
+                  setCurrentRole("owner");
+                  setActiveTab("finance");
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+                  <span style={{ fontSize: "1.4rem" }}>👑</span>
+                  <div>
+                    <div style={{ fontWeight: 800, color: "#eab308", fontSize: "0.95rem" }}>Mill Owner</div>
+                    <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Executive Financial View</div>
+                  </div>
+                </div>
+                <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", lineHeight: 1.3 }}>
+                  Focus on ₹ Unit Economics, P&amp;L margins, daily electricity burn, and overall delivery revenue.
+                </p>
+              </div>
+
+              {/* Option 2: Customer / Buyer */}
+              <div
+                style={{
+                  background: currentRole === "customer" ? "rgba(56, 189, 248, 0.15)" : "rgba(15, 23, 42, 0.6)",
+                  border: `1.5px solid ${currentRole === "customer" ? "#38bdf8" : "rgba(255,255,255,0.08)"}`,
+                  borderRadius: "12px",
+                  padding: "16px",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease"
+                }}
+                onClick={() => {
+                  setCurrentRole("customer");
+                  setActiveTab("orders");
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+                  <span style={{ fontSize: "1.4rem" }}>🛍️</span>
+                  <div>
+                    <div style={{ fontWeight: 800, color: "#38bdf8", fontSize: "0.95rem" }}>Customer / Buyer</div>
+                    <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Self-Service Tracking Portal</div>
+                  </div>
+                </div>
+                <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", lineHeight: 1.3 }}>
+                  Zero phone calls. Live interactive order pipeline stepper, passed QC meters, and dispatch tracking.
+                </p>
+              </div>
+
+              {/* Option 3: Floor Supervisor */}
+              <div
+                style={{
+                  background: currentRole === "floor_supervisor" ? "rgba(16, 185, 129, 0.15)" : "rgba(15, 23, 42, 0.6)",
+                  border: `1.5px solid ${currentRole === "floor_supervisor" ? "#10b981" : "rgba(255,255,255,0.08)"}`,
+                  borderRadius: "12px",
+                  padding: "16px",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease"
+                }}
+                onClick={() => {
+                  setCurrentRole("floor_supervisor");
+                  setActiveTab("machines");
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+                  <span style={{ fontSize: "1.4rem" }}>⚡</span>
+                  <div>
+                    <div style={{ fontWeight: 800, color: "#34d399", fontSize: "0.95rem" }}>Floor Supervisor</div>
+                    <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Shopfloor Telemetry &amp; Looms</div>
+                  </div>
+                </div>
+                <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", lineHeight: 1.3 }}>
+                  Machine RPM &amp; Picks telemetry, live breakdowns/maintenance, ASTM 4-point QC bench inspection.
+                </p>
+              </div>
+
+              {/* Option 4: System Admin */}
+              <div
+                style={{
+                  background: currentRole === "admin" ? "rgba(99, 102, 241, 0.15)" : "rgba(15, 23, 42, 0.6)",
+                  border: `1.5px solid ${currentRole === "admin" ? "#818cf8" : "rgba(255,255,255,0.08)"}`,
+                  borderRadius: "12px",
+                  padding: "16px",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease"
+                }}
+                onClick={() => {
+                  setCurrentRole("admin");
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+                  <span style={{ fontSize: "1.4rem" }}>🛡️</span>
+                  <div>
+                    <div style={{ fontWeight: 800, color: "#a5b4fc", fontSize: "0.95rem" }}>System Admin</div>
+                    <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Full Factory Orchestration</div>
+                  </div>
+                </div>
+                <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", lineHeight: 1.3 }}>
+                  Full unified privileges: Raw yarn inward, fleet truck consolidation, QC locks, and P&amp;L books.
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+              <button
+                className="glass-btn btn-pulse"
+                style={{ width: "100%", padding: "12px", fontSize: "0.95rem" }}
+                onClick={() => setRoleModalOpen(false)}
+              >
+                Launch Dashboard as {currentRole === "owner" ? "Mill Owner" : currentRole === "customer" ? "Customer / Buyer" : currentRole === "floor_supervisor" ? "Floor Supervisor" : "System Admin"} →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Glass Navigation Tabs Bar */}
       <nav className="glass-tabs-nav">
-        <button
-          className={`glass-tab-btn ${activeTab === "yarn" ? "active" : ""}`}
-          onClick={() => {
-            setActiveTab("yarn");
-            updateInspector("GET /api/v1/yarn/stock", "YarnController.listStock(req, res)", "store_manager", "SELECT * FROM raw_material_batches ORDER BY inward_date DESC;", ["Live safety buffer alerts", "Immediate stock reconciliation on delivery"]);
-          }}
-        >
-          <span>1. Yarn Gate &amp; Inward</span>
-          <span className="tab-badge">{stockList.length}</span>
-        </button>
-        <button
-          className={`glass-tab-btn ${activeTab === "machines" ? "active" : ""}`}
-          onClick={() => {
-            setActiveTab("machines");
-            updateInspector("GET /api/v1/machines", "MachineController.listMachines(req, res)", "floor_supervisor", "SELECT * FROM machines ORDER BY stage, machine_id;", ["Process segregation (Spinning, Weaving, Dyeing)", "Dynamic stat card reconciliation", "Mid-shift handover simulation"]);
-          }}
-        >
-          <span>2. Floor Machines &amp; Telemetry</span>
-          <span className="tab-badge">{dynamicStats.total}</span>
-        </button>
-        <button
-          className={`glass-tab-btn ${activeTab === "quality" ? "active" : ""}`}
-          onClick={() => {
-            setActiveTab("quality");
-            updateInspector("GET /api/v1/quality/rolls", "QualityController.listRolls(req, res)", "qc_inspector", "SELECT * FROM fabric_rolls ORDER BY produced_at DESC;", ["ASTM D5430 4-point penalty score audit", "Upstream lineage tracing back to Yarn Lot"]);
-          }}
-        >
-          <span>3. Quality Control (ASTM D5430)</span>
-          <span className="tab-badge">{rolls.length}</span>
-        </button>
-        <button
-          className={`glass-tab-btn ${activeTab === "dispatch" ? "active" : ""}`}
-          onClick={() => {
-            setActiveTab("dispatch");
-            fetchTrucks();
-            updateInspector("GET /api/v1/dispatch/trucks", "DispatchController.listAvailableTrucks(req, res)", "dock_clerk", "SELECT * FROM dispatch_items; -- Computes payload capacity & route consolidation", ["Payload capacity verification per vehicle", "AI route consolidation to merge similar destination shipments", "Prevents double-dispatch"]);
-          }}
-        >
-          <span>4. Fleet Trucks &amp; Dispatch Dock</span>
-          <span className="tab-badge">{trucksData.trucks?.length || 5}</span>
-        </button>
-        <button
-          className={`glass-tab-btn ${activeTab === "orders" ? "active" : ""}`}
-          onClick={() => {
-            setActiveTab("orders");
-            updateInspector("GET /api/v1/orders", "OrderController.listOrders(req, res)", "sales_and_buyer", "SELECT * FROM customer_orders ORDER BY created_at DESC;", ["Buyer self-service portal eliminates floor phone calls", "Multi-stage pipeline visual progress tracker"]);
-          }}
-        >
-          <span>5. Instant Order Tracking</span>
-          <span className="tab-badge">{orders.length}</span>
-        </button>
-        <button
-          className={`glass-tab-btn ${activeTab === "finance" ? "active" : ""}`}
-          onClick={() => {
-            setActiveTab("finance");
-            updateInspector("GET /api/v1/finance/pnl-summary", "FinanceController.getPnLSummary(req, res)", "mill_owner", "SELECT * FROM customer_orders; -- Dynamic ABC waterfall in Indian Rupees (₹)", ["Activity-Based Costing (ABC) in INR", "Direct Yarn absorption (₹102.5/m) + Loom Power (₹22.5/m) + Labor (₹14/m)"]);
-          }}
-        >
-          <span>6. Mill Owner's Book (₹ ABC)</span>
-        </button>
+        {(currentRole === "admin" || currentRole === "floor_supervisor") && (
+          <button
+            className={`glass-tab-btn ${activeTab === "yarn" ? "active" : ""}`}
+            onClick={() => {
+              setActiveTab("yarn");
+              updateInspector("GET /api/v1/yarn/stock", "YarnController.listStock(req, res)", "store_manager", "SELECT * FROM raw_material_batches ORDER BY inward_date DESC;", ["Live safety buffer alerts", "Immediate stock reconciliation on delivery"]);
+            }}
+          >
+            <span>1. Yarn Gate &amp; Inward</span>
+            <span className="tab-badge">{stockList.length}</span>
+          </button>
+        )}
+
+        {(currentRole === "admin" || currentRole === "floor_supervisor") && (
+          <button
+            className={`glass-tab-btn ${activeTab === "machines" ? "active" : ""}`}
+            onClick={() => {
+              setActiveTab("machines");
+              updateInspector("GET /api/v1/machines", "MachineController.listMachines(req, res)", "floor_supervisor", "SELECT * FROM machines ORDER BY stage, machine_id;", ["Process segregation (Spinning, Weaving, Dyeing)", "Dynamic stat card reconciliation", "Mid-shift handover simulation"]);
+            }}
+          >
+            <span>2. Floor Machines &amp; Telemetry</span>
+            <span className="tab-badge">{dynamicStats.total}</span>
+          </button>
+        )}
+
+        {(currentRole === "admin" || currentRole === "floor_supervisor") && (
+          <button
+            className={`glass-tab-btn ${activeTab === "quality" ? "active" : ""}`}
+            onClick={() => {
+              setActiveTab("quality");
+              updateInspector("GET /api/v1/quality/rolls", "QualityController.listRolls(req, res)", "qc_inspector", "SELECT * FROM fabric_rolls ORDER BY produced_at DESC;", ["ASTM D5430 4-point penalty score audit", "Upstream lineage tracing back to Yarn Lot"]);
+            }}
+          >
+            <span>3. Quality Control (ASTM D5430)</span>
+            <span className="tab-badge">{rolls.length}</span>
+          </button>
+        )}
+
+        {(currentRole === "admin" || currentRole === "floor_supervisor") && (
+          <button
+            className={`glass-tab-btn ${activeTab === "dispatch" ? "active" : ""}`}
+            onClick={() => {
+              setActiveTab("dispatch");
+              fetchTrucks();
+              updateInspector("GET /api/v1/dispatch/trucks", "DispatchController.listAvailableTrucks(req, res)", "dock_clerk", "SELECT * FROM dispatch_items; -- Computes payload capacity & route consolidation", ["Payload capacity verification per vehicle", "AI route consolidation to merge similar destination shipments", "Prevents double-dispatch"]);
+            }}
+          >
+            <span>4. Fleet Trucks &amp; Dispatch Dock</span>
+            <span className="tab-badge">{trucksData.trucks?.length || 5}</span>
+          </button>
+        )}
+
+        {(currentRole === "admin" || currentRole === "customer") && (
+          <button
+            className={`glass-tab-btn ${activeTab === "orders" ? "active" : ""}`}
+            onClick={() => {
+              setActiveTab("orders");
+              updateInspector("GET /api/v1/orders", "OrderController.listOrders(req, res)", "sales_and_buyer", "SELECT * FROM customer_orders ORDER BY created_at DESC;", ["Buyer self-service portal eliminates floor phone calls", "Multi-stage pipeline visual progress tracker"]);
+            }}
+          >
+            <span>5. Instant Order Tracking</span>
+            <span className="tab-badge">{orders.length}</span>
+          </button>
+        )}
+
+        {(currentRole === "admin" || currentRole === "owner") && (
+          <button
+            className={`glass-tab-btn ${activeTab === "finance" ? "active" : ""}`}
+            onClick={() => {
+              setActiveTab("finance");
+              fetchPnl();
+              updateInspector("GET /api/v1/finance/pnl-summary", "FinanceController.computePnl(req, res)", "mill_owner", "SELECT * FROM raw_material_batches, machines, customer_orders; -- Dynamic ABC costing engine", ["Activity-Based Costing in Indian Rupees (₹)", "Aggregates yarn raw cost, motor electrical kWh, and weaver labor rates"]);
+            }}
+          >
+            <span>6. Mill Owner&apos;s Book (₹ INR)</span>
+          </button>
+        )}
       </nav>
 
       {/* Judge & Shift Action Bar */}
@@ -1868,38 +2070,81 @@ GROUP BY o.order_id;`,
                     </div>
                   </div>
 
-                  {/* Multi-Stage Visual Stepper */}
+                  {/* Multi-Stage Dynamic Visual Stepper */}
                   <div style={{ background: "rgba(15, 23, 42, 0.4)", border: "1px solid var(--glass-border)", borderRadius: "12px", padding: "20px", marginBottom: "24px" }}>
-                    <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: "14px" }}>
-                      Production Lifecycle Stepper:
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+                      <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>
+                        Live Factory Lifecycle Pipeline:
+                      </span>
+                      <span className="badge badge-pass">
+                        Current Bottleneck: {trackedOrder.order_status?.replace("_", " ")}
+                      </span>
                     </div>
+
                     <div className="stepper-container">
                       <div className="stepper-track" />
-                      <div className="stepper-item">
-                        <div className="stepper-bubble completed">✓</div>
-                        <span className="stepper-label active">1. Yarn Inward</span>
-                      </div>
-                      <div className="stepper-item">
-                        <div className="stepper-bubble completed">✓</div>
-                        <span className="stepper-label active">2. Spinning</span>
-                      </div>
-                      <div className="stepper-item">
-                        <div className="stepper-bubble active">⚡</div>
-                        <span className="stepper-label active">3. Weaving (Active)</span>
-                      </div>
-                      <div className="stepper-item">
-                        <div className="stepper-bubble">4</div>
-                        <span className="stepper-label">4. Dyeing</span>
-                      </div>
-                      <div className="stepper-item">
-                        <div className="stepper-bubble">5</div>
-                        <span className="stepper-label">5. QC 4-Point</span>
-                      </div>
-                      <div className="stepper-item">
-                        <div className="stepper-bubble">6</div>
-                        <span className="stepper-label">6. Truck Outward</span>
-                      </div>
+                      {(trackedOrder.milestones && trackedOrder.milestones.length > 0
+                        ? trackedOrder.milestones
+                        : [
+                            { stage_name: "ORDER_RECEIVED", status: "COMPLETED", label: "Order Confirmed" },
+                            { stage_name: "MATERIAL_ALLOCATED", status: "COMPLETED", label: "Yarn Staged" },
+                            { stage_name: "SPINNING_ACTIVE", status: "COMPLETED", label: "Spinning" },
+                            { stage_name: "WEAVING_ACTIVE", status: "ACTIVE", label: "Weaving (Active)" },
+                            { stage_name: "QC_STAGE", status: "PENDING", label: "ASTM 4-Point QC" },
+                            { stage_name: "DISPATCHED", status: "PENDING", label: "Truck Dispatch" },
+                          ]
+                      ).map((m, idx) => (
+                        <div className="stepper-item" key={m.stage_name || idx}>
+                          <div
+                            className={`stepper-bubble ${
+                              m.status === "COMPLETED"
+                                ? "completed"
+                                : m.status === "ACTIVE"
+                                ? "active"
+                                : ""
+                            }`}
+                          >
+                            {m.status === "COMPLETED" ? "✓" : m.status === "ACTIVE" ? "⚡" : idx + 1}
+                          </div>
+                          <span
+                            className={`stepper-label ${
+                              m.status === "ACTIVE" || m.status === "COMPLETED" ? "active" : ""
+                            }`}
+                          >
+                            {m.label}
+                          </span>
+                          {m.timestamp && (
+                            <span style={{ fontSize: "0.68rem", color: "#94a3b8" }}>{m.timestamp}</span>
+                          )}
+                        </div>
+                      ))}
                     </div>
+
+                    {/* Live Notifications & Dispatch Info for Buyer */}
+                    {trackedOrder.notifications && trackedOrder.notifications.length > 0 && (
+                      <div style={{ marginTop: "18px", borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "14px" }}>
+                        <div style={{ fontSize: "0.8rem", color: "#38bdf8", fontWeight: 700, marginBottom: "8px" }}>
+                          📡 Live Production Telemetry Log:
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                          {trackedOrder.notifications.slice(0, 3).map((n) => (
+                            <div key={n.notification_id} style={{ fontSize: "0.78rem", color: "var(--text-secondary)", background: "rgba(0,0,0,0.25)", padding: "6px 12px", borderRadius: "6px", display: "flex", justifyContent: "space-between" }}>
+                              <span>• {n.message_body}</span>
+                              <span style={{ color: "var(--text-muted)", marginLeft: "12px" }}>{n.sent_at?.slice(11, 16) || "Logged"}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {trackedOrder.dispatched_truck_plate && (
+                      <div style={{ marginTop: "12px", background: "rgba(16, 185, 129, 0.12)", border: "1px solid rgba(16, 185, 129, 0.3)", borderRadius: "8px", padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span style={{ color: "#34d399", fontWeight: 700, fontSize: "0.85rem" }}>
+                          🚚 Dispatched on Truck {trackedOrder.dispatched_truck_plate}
+                        </span>
+                        <span className="code-chip">Invoice: {trackedOrder.invoice_number || "INV-2026-001"}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -1922,10 +2167,14 @@ GROUP BY o.order_id;`,
                     {orders.map((o) => (
                       <tr
                         key={o.order_number}
-                        style={{ cursor: "pointer" }}
+                        style={{
+                          cursor: "pointer",
+                          background: trackedOrder?.order_number === o.order_number ? "rgba(56, 189, 248, 0.1)" : "transparent",
+                          outline: trackedOrder?.order_number === o.order_number ? "1px solid rgba(56, 189, 248, 0.4)" : "none",
+                        }}
                         onClick={() => {
                           setOrderQuery(o.order_number);
-                          setTrackedOrder(o);
+                          fetchOrderTrackDetails(o.order_number);
                         }}
                       >
                         <td><span className="code-chip">{o.order_number}</span></td>
