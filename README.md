@@ -92,26 +92,34 @@ ETMS separates edge acquisition, transactional core, and user interfaces into a 
   * Live Truck Cargo Weight & Volume Capacity Meter (1,500 kg maximum payload).
   * Offline resilient replay queue for loading docks with dead WiFi.
 
-### Scene 5: Customer Live Tracking & Transparency Portal (`/customer/track`)
+### Scene 5: Customer Demands, Deadlines & Order Transparency Portal (`/customer/demands` & `/customer/track`)
 * **Actor:** Buyer / Customer (e.g. Zara Sourcing / Inditex, Marks & Spencer, Arvind Mills)
 * **Operational Gap 4 Solution:**
-  * Self-service order lookup by PO Number (e.g. `ORD-2026-081`).
+  * **Commercial Demand & Quotation Intake:** Direct intake form calculating capacity feasibility based on mill loom speed (1,200 m/day baseline) and instant lead time estimations.
+  * **Self-Service Order Lookup:** PO Number search (e.g. `ORD-2026-081`) with real-time progress calculations.
   * **Interactive Milestone Stepper:** Order Confirmed ➔ Yarn Staged ➔ Spinning ➔ Weaving Active ➔ ASTM QC ➔ Dispatched.
   * **Live Progress Bar:** Completed & passed meters vs target meters (3,450 / 5,000 meters = 69.0%).
-  * **Digital Quality Lab Certificate:** Official stamp verifying 98.4% ASTM Grade A compliance and defect frequency per 100m².
+  * **Digital Quality Lab Certificate:** Official stamp verifying ASTM Grade A compliance and defect frequency per 100m².
   * Real-time automated push notifications log (SMS, Email, Portal alerts).
 
 ### Scene 6: Activity-Based Costing (ABC) & Financial Closing (`/owner/financial-rollup`)
 * **Actor:** Mill Owner / CFO
 * **Capabilities:**
-  * True dynamic formula:
+  * True dynamic formula in Indian Rupees (₹ INR):
     $$\text{Actual Unit Cost} = \frac{\text{Direct Raw Yarn Consumed} + \text{Floor Wages} + \text{Loom Energy \& Depreciation} + \text{Scrap Loss}}{\text{Passed Production Meters}}$$
-  * Contract Gross Profit Margin speedometer (e.g. 22.7% margin on $48.50/m selling price).
+  * Contract Gross Profit Margin speedometer (e.g. 22.7% margin on ₹225/m selling price).
   * **Visual Waterfall Chart:** Displays exact monetary rollup across materials, wages, machine overhead, defect waste, and final net profit.
 
 ---
 
-## 4. Verification & Invariant Matrix
+## 4. Video & Media Asset Pipeline
+* **Machine Scene Real-time Ambient Loop:** `frontend/public/videos/machine-scene-background.mp4` running as a subtle, low-opacity backdrop with calibrated contrast and dark-glass radial gradients.
+* **Access Portal Transition Video:** `frontend/public/videos/login-transition.mp4` integrated for authentic factory floor transitions.
+* **High-Res Fabric QC Lineage:** `frontend/public/qc-fabric-texture.jpg` embedded in ASTM D5430 inspection benches.
+
+---
+
+## 5. Verification & Invariant Matrix
 
 | Invariant Rule | Verification Mechanism | Test Function (`test_invariants.py`) |
 | :--- | :--- | :--- |
@@ -119,27 +127,27 @@ ETMS separates edge acquisition, transactional core, and user interfaces into a 
 | **Roll Traceability Lineage** | Enforced Foreign Key on `machine_id` & `order_id` | `test_astm_qc_grading_and_lineage_trace` |
 | **No Dispatch of Uninspected Fabric** | HTTP 400 rejection unless `qc_status == 'PASSED'` | `test_rejection_of_uninspected_roll_dispatch` |
 | **Zero Double-Dispatches** | Unique row lock & constraint on `roll_id` in `dispatch_items` | `test_concurrency_lock_prevents_double_dispatch` |
-| **Customer Transparency Access** | Self-service tracking endpoint | `test_customer_order_tracking_portal` |
-| **Activity-Based Costing Accuracy** | True multi-variable cost rollup | `test_activity_based_costing_calculation` |
+| **Customer Transparency Access** | Self-service tracking & demands endpoint | `test_customer_order_tracking_portal` |
+| **Activity-Based Costing Accuracy** | True multi-variable cost rollup in ₹ INR | `test_activity_based_costing_calculation` |
 
 ---
 
-## 5. How to Run the System
+## 6. How to Run the System
 
-### Option A: 1-Click Instant Browser Demo (Zero Dependencies!)
-Simply open `frontend/index.html` in any web browser!
-The application includes a dual-engine architecture with an in-memory client database, realistic mock mill data, audio effects, and real-time simulator controls.
+### Option A: Next.js Modern Industrial Frontend (Port 3000)
+```bash
+# In frontend/ directory
+npm run dev -- -p 3000
+```
+Runs the full responsive Next.js application with Turbopack, live role switching modal, IoT telemetry, and embedded video streaming.
 
-### Option B: Full-Stack Python FastAPI Backend
+### Option B: Full-Stack Python FastAPI Backend (Port 8000)
 ```bash
 # 1. Activate Virtual Environment
 .venv/Scripts/activate
 
-# 2. Install Requirements
-pip install -r backend/requirements.txt
-
-# 3. Start Core API Server
-uvicorn backend.app.main:app --reload --port 8000
+# 2. Start Core API Server
+uvicorn backend.app.main:app --port 8000
 ```
 Open `http://localhost:8000/docs` for the interactive Swagger OpenAPI specification.
 

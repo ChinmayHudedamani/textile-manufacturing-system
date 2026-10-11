@@ -1293,9 +1293,25 @@ VALUES (gen_random_uuid(), 'ORD-2026-AUTO', '${demandForm.buyer_name}', '${deman
 
         {/* ================= TAB 2: FLOOR MACHINES & MID-SHIFT TELEMETRY ================= */}
         {activeTab === "machines" && (
-          <div>
-            {/* Dynamic Stat Cards */}
-            <div className="kpi-grid">
+          <div className="machine-scene-container">
+            {/* Ambient Background Video with Lighting Filter */}
+            <div className="machine-bg-video-wrapper">
+              <video
+                className="machine-bg-video"
+                autoPlay
+                loop
+                muted
+                playsInline
+                preload="auto"
+              >
+                <source src="/videos/machine-scene-background.mp4" type="video/mp4" />
+              </video>
+              <div className="machine-bg-overlay" />
+            </div>
+
+            <div className="machine-scene-content">
+              {/* Dynamic Stat Cards */}
+              <div className="kpi-grid">
               <div className="kpi-card">
                 <div className="kpi-label">Total Machines</div>
                 <div className="kpi-value">{dynamicStats.total}</div>
@@ -1573,6 +1589,7 @@ VALUES (gen_random_uuid(), 'ORD-2026-AUTO', '${demandForm.buyer_name}', '${deman
                 </div>
               </div>
             )}
+            </div>
           </div>
         )}
 

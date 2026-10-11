@@ -827,3 +827,43 @@ tr:hover td {
 .stepper-label.active {
   color: #38bdf8;
 }
+
+/* Machine Scene Background Video & Lighting Container */
+.machine-scene-container {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  padding: 10px;
+}
+
+.machine-bg-video-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.machine-bg-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.18;
+  filter: contrast(1.15) brightness(0.65) saturate(1.2);
+}
+
+.machine-bg-overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(15, 23, 42, 0.72) 0%, rgba(10, 15, 29, 0.94) 100%);
+  backdrop-filter: blur(2px);
+}
+
+.machine-scene-content {
+  position: relative;
+  z-index: 1;
+}
+
