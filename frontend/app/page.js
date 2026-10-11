@@ -762,20 +762,47 @@ GROUP BY o.order_id;`,
       {/* Role Selection Modal on launch or when switching */}
       {roleModalOpen && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(5, 10, 24, 0.85)", backdropFilter: "blur(12px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1200 }}>
-          <div className="glass-panel" style={{ width: "680px", maxWidth: "92vw", border: "1px solid rgba(255,255,255,0.15)", boxShadow: "0 20px 60px rgba(0,0,0,0.8)" }}>
-            <div style={{ textAlign: "center", marginBottom: "22px" }}>
-              <div style={{ display: "inline-flex", padding: "10px", borderRadius: "14px", background: "linear-gradient(135deg, #6366f1, #38bdf8)", marginBottom: "10px" }}>
+          <div
+            className="glass-panel"
+            style={{
+              width: "700px",
+              maxWidth: "92vw",
+              border: "1px solid rgba(255,255,255,0.18)",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.85)",
+              overflow: "hidden",
+              position: "relative",
+              padding: 0
+            }}
+          >
+            {/* Header Textile Banner */}
+            <div
+              style={{
+                height: "110px",
+                backgroundImage: "linear-gradient(to bottom, rgba(15,23,42,0.3), rgba(15,23,42,0.92)), url('/login-textile-pattern.jpg')",
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "flex-end",
+                padding: "16px 24px",
+                borderBottom: "1px solid rgba(255,255,255,0.1)"
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                 <span style={{ fontSize: "1.8rem" }}>🏭</span>
+                <div>
+                  <h2 style={{ fontSize: "1.35rem", fontWeight: 800, color: "#fff", margin: 0, textShadow: "0 2px 4px rgba(0,0,0,0.8)" }}>
+                    Everest Textile Mills &bull; Access Portal
+                  </h2>
+                  <p style={{ fontSize: "0.8rem", color: "#93c5fd", margin: 0 }}>
+                    Select your operational persona to customize the manufacturing terminal
+                  </p>
+                </div>
               </div>
-              <h2 style={{ fontSize: "1.5rem", fontWeight: 800, color: "#fff", marginBottom: "4px" }}>
-                Select User Workspace Persona
-              </h2>
-              <p style={{ fontSize: "0.88rem", color: "var(--text-muted)" }}>
-                Experience Everest Textile Mills ERP customized for specific industrial operations and stakeholders:
-              </p>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "20px" }}>
+            <div style={{ padding: "20px 24px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "20px" }}>
               {/* Option 1: Mill Owner */}
               <div
                 style={{
@@ -892,6 +919,7 @@ GROUP BY o.order_id;`,
               >
                 Launch Dashboard as {currentRole === "owner" ? "Mill Owner" : currentRole === "customer" ? "Customer / Buyer" : currentRole === "floor_supervisor" ? "Floor Supervisor" : "System Admin"} →
               </button>
+            </div>
             </div>
           </div>
         </div>
@@ -1478,9 +1506,48 @@ GROUP BY o.order_id;`,
 
         {/* ================= TAB 3: QUALITY CONTROL (ASTM D5430) ================= */}
         {activeTab === "quality" && (
-          <div className="layout-split">
-            {/* Left Box: Produce New Roll / ASTM Inspection Bench */}
-            <div className="glass-panel">
+          <div>
+            {/* Visual Textile Banner for Quality Department */}
+            <div
+              style={{
+                height: "120px",
+                backgroundImage: "linear-gradient(to right, rgba(15,23,42,0.92), rgba(15,23,42,0.4)), url('/qc-fabric-texture.jpg')",
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                borderRadius: "14px",
+                padding: "20px 24px",
+                marginBottom: "22px",
+                border: "1px solid rgba(255,255,255,0.12)",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                boxShadow: "0 10px 30px rgba(0,0,0,0.5)"
+              }}
+            >
+              <div>
+                <span className="department-tag dept-weaving" style={{ marginBottom: "8px", display: "inline-block" }}>
+                  ASTM D5430 4-Point Standard
+                </span>
+                <h2 style={{ fontSize: "1.35rem", fontWeight: 800, color: "#fff", margin: 0, textShadow: "0 2px 4px rgba(0,0,0,0.8)" }}>
+                  Fabric Optical &amp; Weft Inspection Station
+                </h2>
+                <p style={{ fontSize: "0.82rem", color: "#e2e8f0", margin: "4px 0 0 0" }}>
+                  Real-time surface defect penalty tracking &bull; Zero scrap dispatch guarantee
+                </p>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "#34d399" }}>
+                  {rolls.filter((r) => r.qc_status === "PASSED").length} / {rolls.length}
+                </div>
+                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>
+                  Certified Passed Rolls
+                </div>
+              </div>
+            </div>
+
+            <div className="layout-split">
+              {/* Left Box: Produce New Roll / ASTM Inspection Bench */}
+              <div className="glass-panel">
               {/* Subtab Toggle */}
               <div style={{ display: "flex", gap: "8px", background: "rgba(15, 23, 42, 0.6)", padding: "4px", borderRadius: "10px", marginBottom: "16px" }}>
                 <button
@@ -1800,6 +1867,7 @@ GROUP BY o.order_id;`,
                   </tbody>
                 </table>
               </div>
+            </div>
             </div>
           </div>
         )}
