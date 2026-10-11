@@ -29,8 +29,8 @@ const ROLE_CONFIG = {
     gradient: "linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(79, 70, 229, 0.3))",
     icon: "🛡️",
     defaultTab: "machines",
-    allowedTabs: ["yarn", "machines", "quality", "dispatch", "orders", "finance"],
-    description: "Full factory orchestration: Raw yarn, looms, ASTM QC, dispatch dock, and P&L books."
+    allowedTabs: ["yarn", "machines", "quality", "dispatch", "orders", "demands", "finance"],
+    description: "Full factory orchestration: Raw yarn, looms, ASTM QC, dispatch dock, customer demands, and P&L books."
   },
   owner: {
     title: "Mill Owner",
@@ -55,9 +55,9 @@ const ROLE_CONFIG = {
     badgeColor: "#38bdf8",
     gradient: "linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(14, 165, 233, 0.3))",
     icon: "🛍️",
-    defaultTab: "orders",
-    allowedTabs: ["orders"],
-    description: "Zero phone calls: Live interactive order pipeline stepper, passed QC meters, and dispatch tracking."
+    defaultTab: "demands",
+    allowedTabs: ["demands", "orders"],
+    description: "Commercial Portal: Submit incoming demands, track delivery deadlines, capacity feasibility, and live weaving progress."
   }
 };
 
@@ -142,6 +142,18 @@ export default function EverestTextileERP() {
   const [orderQuery, setOrderQuery] = useState("ORD-2026-081");
   const [trackedOrder, setTrackedOrder] = useState(null);
 
+  // Demands & Deadlines State (Customer Commercial Portal)
+  const [demandsList, setDemandsList] = useState([]);
+  const [demandForm, setDemandForm] = useState({
+    buyer_name: "Zara Sourcing Hub",
+    buyer_email: "procurement@inditex.com",
+    fabric_specification: "60s Combed Cotton Poplin (300 TC)",
+    color_hex: "#2563EB",
+    target_meters: 15000,
+    delivery_deadline: "2026-11-25",
+    urgency_level: "STANDARD"
+  });
+
   // Breakdown Modal state
   const [faultMachineId, setFaultMachineId] = useState(null);
   const [faultReason, setFaultReason] = useState("Warp tension breakage / Motor overheat");
@@ -183,6 +195,7 @@ export default function EverestTextileERP() {
     fetchRolls();
     fetchManifest();
     fetchOrders();
+    fetchDemands();
     fetchPnl();
     fetchTrucks();
   };
@@ -196,6 +209,18 @@ export default function EverestTextileERP() {
       }
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const fetchDemands = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/customer/demands`);
+      if (res.ok) {
+        const data = await res.json();
+        setDemandsList(data);
+      }
+    } catch (e) {
+      console.error("Error fetching customer demands:", e);
     }
   };
 
@@ -761,6 +786,64 @@ GROUP BY o.order_id;`,
     }
   };
 
+  // 11. Customer Demands Submission Handler
+  const handleCreateDemandSubmit = async (e) => {
+    e.preventDefault();
+    if (!demandForm.buyer_name || !demandForm.fabric_specification || !demandForm.delivery_deadline) {
+      notify("Please fill all required demand parameters", "error");
+      return;
+    }
+
+    updateInspector(
+      "POST /api/v1/customer/demands",
+      "DemandsController.submitNewOrderDemand(req, res)",
+      "customer",
+      `INSERT INTO customer_orders (order_id, order_number, buyer_name, buyer_email, fabric_specification, color_hex, target_meters, delivery_deadline, order_status, contract_price_per_meter)
+VALUES (gen_random_uuid(), 'ORD-2026-AUTO', '${demandForm.buyer_name}', '${demandForm.buyer_email}', '${demandForm.fabric_specification}', '${demandForm.color_hex}', ${demandForm.target_meters}, '${demandForm.delivery_deadline}', 'COMMERCIAL_QUOTATION_PENDING', 225.00);`,
+      [
+        "OOP Controller calculates mill capacity feasibility (1,200m/day baseline)",
+        "Assigns unique commercial order number and triggers floor scheduling",
+        "Generates initial milestone progress tracking pipeline for buyer"
+      ]
+    );
+
+    try {
+      const res = await fetch(`${API_BASE}/customer/demands`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          buyer_name: demandForm.buyer_name,
+          buyer_email: demandForm.buyer_email,
+          fabric_specification: demandForm.fabric_specification,
+          color_hex: demandForm.color_hex,
+          target_meters: Number(demandForm.target_meters),
+          delivery_deadline: demandForm.delivery_deadline,
+          urgency_level: demandForm.urgency_level
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        notify(`🎉 Demand Received! Commercial PO ${data.order_number} confirmed (${data.feasibility_status})`, "success");
+        fetchDemands();
+        fetchOrders();
+        setOrderQuery(data.order_number);
+        setDemandForm({
+          buyer_name: "Marks & Spencer Sourcing",
+          buyer_email: "orders@marksandspencer.co.uk",
+          fabric_specification: "40s Twill Combed Chino Weave",
+          color_hex: "#10B981",
+          target_meters: 8000,
+          delivery_deadline: "2026-12-05",
+          urgency_level: "STANDARD"
+        });
+      } else {
+        notify(`Error: ${data.detail || "Failed to submit demand"}`, "error");
+      }
+    } catch (err) {
+      notify(`Connection error: ${err.message}`, "error");
+    }
+  };
+
   return (
     <div className="terminal-shell">
       {/* Top Glassmorphic Navigation Bar */}
@@ -952,6 +1035,20 @@ GROUP BY o.order_id;`,
           >
             <span>4. Fleet Trucks &amp; Dispatch Dock</span>
             <span className="tab-badge">{trucksData.trucks?.length || 5}</span>
+          </button>
+        )}
+
+        {ROLE_CONFIG[currentRole]?.allowedTabs.includes("demands") && (
+          <button
+            className={`glass-tab-btn ${activeTab === "demands" ? "active" : ""}`}
+            onClick={() => {
+              setActiveTab("demands");
+              fetchDemands();
+              updateInspector("GET /api/v1/customer/demands", "DemandsController.listCustomerDemands(req, res)", "customer", "SELECT * FROM customer_orders ORDER BY created_at DESC; -- Feasibility capacity engine calculation", ["Direct buyer incoming demand & deadline intake", "Evaluates Everest daily capacity (1,200m/day) feasibility", "Locks in commercial unit rate @ ₹225/m"]);
+            }}
+          >
+            <span>📋 Incoming Demands &amp; Deadlines</span>
+            <span className="tab-badge">{demandsList.length || 4}</span>
           </button>
         )}
 
@@ -2024,6 +2121,300 @@ GROUP BY o.order_id;`,
                         <tr>
                           <td colSpan="6" style={{ textAlign: "center", padding: "30px" }}>
                             No rolls currently dispatched today.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ================= TAB: CUSTOMER INCOMING DEMANDS & DELIVERY DEADLINES ================= */}
+        {activeTab === "demands" && (
+          <div>
+            {/* Top Overview KPI Grid */}
+            <div className="kpi-grid" style={{ marginBottom: "22px" }}>
+              <div className="kpi-card" style={{ borderLeft: "4px solid #38bdf8" }}>
+                <div className="kpi-label">Active Commercial Demands</div>
+                <div className="kpi-value" style={{ color: "#38bdf8" }}>
+                  {demandsList.length} In-Flight
+                </div>
+                <div className="kpi-sub">Contracted Buyer Inquiries</div>
+              </div>
+
+              <div className="kpi-card" style={{ borderLeft: "4px solid #10b981" }}>
+                <div className="kpi-label">Demanded Volume</div>
+                <div className="kpi-value" style={{ color: "#34d399" }}>
+                  {demandsList.reduce((acc, d) => acc + (d.target_meters || 0), 0).toLocaleString()} m
+                </div>
+                <div className="kpi-sub">Total Woven Fabric Required</div>
+              </div>
+
+              <div className="kpi-card" style={{ borderLeft: "4px solid #eab308" }}>
+                <div className="kpi-label">Mill Production Rate</div>
+                <div className="kpi-value" style={{ color: "#fbbf24" }}>
+                  1,200 m / day
+                </div>
+                <div className="kpi-sub">6 Active Airjet &amp; Rapier Looms</div>
+              </div>
+
+              <div className="kpi-card" style={{ borderLeft: "4px solid #a855f7" }}>
+                <div className="kpi-label">Total Commercial Pipeline</div>
+                <div className="kpi-value" style={{ color: "#c084fc" }}>
+                  ₹{demandsList.reduce((acc, d) => acc + (d.total_order_value_inr || 0), 0).toLocaleString()}
+                </div>
+                <div className="kpi-sub">Valued @ Standard ₹225/meter</div>
+              </div>
+            </div>
+
+            <div className="panel-grid-2col">
+              {/* Left Column: Place New Order Demand Form */}
+              <div className="glass-panel">
+                <div className="glass-panel-header">
+                  <div className="panel-title">
+                    <span>✨ Submit Commercial Demand / Request Quotation</span>
+                  </div>
+                  <span className="badge badge-running">Customer Portal</span>
+                </div>
+
+                <form onSubmit={handleCreateDemandSubmit}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
+                    <div>
+                      <label className="form-label">Buyer / Corporate Entity *</label>
+                      <input
+                        type="text"
+                        className="glass-input"
+                        placeholder="e.g. Zara Sourcing / Marks & Spencer"
+                        value={demandForm.buyer_name}
+                        onChange={(e) => setDemandForm({ ...demandForm, buyer_name: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="form-label">Procurement Email *</label>
+                      <input
+                        type="email"
+                        className="glass-input"
+                        placeholder="buyer@brand.com"
+                        value={demandForm.buyer_email}
+                        onChange={(e) => setDemandForm({ ...demandForm, buyer_email: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: "12px" }}>
+                    <label className="form-label">Fabric Weave &amp; Yarn Specification *</label>
+                    <select
+                      className="glass-select"
+                      value={demandForm.fabric_specification}
+                      onChange={(e) => setDemandForm({ ...demandForm, fabric_specification: e.target.value })}
+                    >
+                      <option value="60s Combed Cotton Poplin (300 TC)">60s Combed Cotton Poplin (300 TC) - Premium Shirting</option>
+                      <option value="40s Twill Combed Chino Weave">40s Twill Combed Chino Weave - Trousers &amp; Uniforms</option>
+                      <option value="2/80s Giza Cotton Dobby">2/80s Giza Cotton Dobby - Luxury Export Apparel</option>
+                      <option value="100% Linen 50s Plain Weave">100% Linen 50s Plain Weave - Summer Breathable</option>
+                      <option value="Poly-Viscose Suiting 280 GSM">Poly-Viscose Suiting 280 GSM - Formal Suiting</option>
+                    </select>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
+                    <div>
+                      <label className="form-label">Demanded Volume (Meters) *</label>
+                      <input
+                        type="number"
+                        className="glass-input"
+                        min="500"
+                        step="100"
+                        value={demandForm.target_meters}
+                        onChange={(e) => setDemandForm({ ...demandForm, target_meters: Number(e.target.value) })}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="form-label">Delivery Deadline *</label>
+                      <input
+                        type="date"
+                        className="glass-input"
+                        value={demandForm.delivery_deadline}
+                        onChange={(e) => setDemandForm({ ...demandForm, delivery_deadline: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" }}>
+                    <div>
+                      <label className="form-label">Color Swatch</label>
+                      <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                        <input
+                          type="color"
+                          value={demandForm.color_hex}
+                          onChange={(e) => setDemandForm({ ...demandForm, color_hex: e.target.value })}
+                          style={{
+                            width: "42px",
+                            height: "38px",
+                            padding: "0",
+                            border: "1px solid var(--glass-border)",
+                            borderRadius: "6px",
+                            background: "transparent",
+                            cursor: "pointer"
+                          }}
+                        />
+                        <span style={{ fontSize: "0.85rem", fontFamily: "monospace", color: "var(--text-secondary)" }}>
+                          {demandForm.color_hex}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="form-label">Urgency Priority</label>
+                      <select
+                        className="glass-select"
+                        value={demandForm.urgency_level}
+                        onChange={(e) => setDemandForm({ ...demandForm, urgency_level: e.target.value })}
+                      >
+                        <option value="STANDARD">STANDARD (Normal Queue)</option>
+                        <option value="EXPEDITED">EXPEDITED (Priority Loom Allocation)</option>
+                        <option value="URGENT">URGENT (Dedicated 24/7 Run)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Dynamic Feasibility Preview Box */}
+                  <div
+                    style={{
+                      background: "rgba(30, 41, 59, 0.6)",
+                      border: "1px dashed rgba(56, 189, 248, 0.35)",
+                      borderRadius: "8px",
+                      padding: "14px",
+                      marginBottom: "16px"
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
+                      <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Estimated Lead Time:</span>
+                      <strong style={{ color: "#38bdf8" }}>
+                        ~{Math.max(3, Math.round(demandForm.target_meters / 1200) + 2)} Working Days
+                      </strong>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
+                      <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Commercial Price Quote:</span>
+                      <strong style={{ color: "#34d399" }}>
+                        ₹{(demandForm.target_meters * 225).toLocaleString()} (@ ₹225/m)
+                      </strong>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>Target Mill Status:</span>
+                      <span className="badge badge-pass">FEASIBLE ON SCHEDULE</span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="glass-btn btn-pulse"
+                    style={{ width: "100%", padding: "12px", fontSize: "0.95rem" }}
+                  >
+                    🚀 Transmit Commercial Demand to Everest Mill
+                  </button>
+                </form>
+              </div>
+
+              {/* Right Column: Active Demands Ledger & Capacity Feasibility Table */}
+              <div className="glass-panel">
+                <div className="glass-panel-header">
+                  <div className="panel-title">
+                    <span>📅 Demands Ledger &amp; Capacity Feasibility</span>
+                  </div>
+                  <button className="glass-btn btn-secondary btn-sm" onClick={fetchDemands}>
+                    Sync Demands
+                  </button>
+                </div>
+
+                <div className="glass-table-wrapper" style={{ maxHeight: "580px", overflowY: "auto" }}>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Demand / PO #</th>
+                        <th>Buyer &amp; Spec</th>
+                        <th>Target Meters</th>
+                        <th>Deadline</th>
+                        <th>Contract Value</th>
+                        <th>Feasibility</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {demandsList.map((d) => (
+                        <tr key={d.order_id}>
+                          <td>
+                            <strong style={{ color: "#38bdf8", fontFamily: "monospace" }}>
+                              {d.order_number}
+                            </strong>
+                            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                              {d.created_at}
+                            </div>
+                          </td>
+                          <td>
+                            <div style={{ fontWeight: 600 }}>{d.buyer_name}</div>
+                            <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
+                              {d.fabric_specification}
+                            </div>
+                          </td>
+                          <td>
+                            <strong style={{ color: "#f8fafc" }}>
+                              {d.target_meters?.toLocaleString()} m
+                            </strong>
+                          </td>
+                          <td>
+                            <div style={{ fontWeight: 600, color: "#fbbf24" }}>
+                              {d.delivery_deadline}
+                            </div>
+                            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                              Lead: {d.estimated_lead_days} days
+                            </div>
+                          </td>
+                          <td>
+                            <strong style={{ color: "#34d399" }}>
+                              ₹{d.total_order_value_inr?.toLocaleString()}
+                            </strong>
+                            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                              @ ₹{d.contract_price_per_meter}/m
+                            </div>
+                          </td>
+                          <td>
+                            <span
+                              className={`badge ${
+                                d.feasibility_status === "ON_SCHEDULE"
+                                  ? "badge-pass"
+                                  : d.feasibility_status === "TIGHT_SCHEDULE"
+                                  ? "badge-running"
+                                  : "badge-fail"
+                              }`}
+                            >
+                              {d.feasibility_status.replace("_", " ")}
+                            </span>
+                          </td>
+                          <td>
+                            <button
+                              className="glass-btn btn-secondary btn-sm"
+                              onClick={() => {
+                                setOrderQuery(d.order_number);
+                                setActiveTab("orders");
+                                fetchOrderTrackDetails(d.order_number);
+                              }}
+                            >
+                              Track →
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                      {demandsList.length === 0 && (
+                        <tr>
+                          <td colSpan="7" style={{ textAlign: "center", padding: "30px", color: "var(--text-muted)" }}>
+                            No active customer demands found. Use the form on the left to transmit a new procurement request.
                           </td>
                         </tr>
                       )}

@@ -137,7 +137,7 @@ class FloorSupervisorRole(BaseRole):
 
 
 class CustomerRole(BaseRole):
-    """Customer / Buyer: Order progress and dispatch manifest for contracted PO."""
+    """Customer / Buyer: Order progress, demands, and dispatch manifest."""
     def __init__(self):
         super().__init__(
             role_name=UserRoleEnum.CUSTOMER,
@@ -149,7 +149,7 @@ class CustomerRole(BaseRole):
         )
 
     def get_allowed_routes(self) -> List[str]:
-        return ["orders"]
+        return ["demands", "orders"]
 
 
 # =====================================================================

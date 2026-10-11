@@ -27,6 +27,7 @@ from backend.app.routers.quality import router as quality_router
 from backend.app.routers.dispatch import router as dispatch_router
 from backend.app.routers.orders import router as orders_router
 from backend.app.routers.finance import router as finance_router
+from backend.app.routers.demands import router as demands_router
 from backend.app.loomtrack_api import router as loomtrack_router
 
 
@@ -110,6 +111,7 @@ app.include_router(quality_router)
 app.include_router(dispatch_router)
 app.include_router(orders_router)
 app.include_router(finance_router)
+app.include_router(demands_router)
 
 # 7. LoomTrack React Compatibility Router
 app.include_router(loomtrack_router)
