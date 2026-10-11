@@ -12,7 +12,14 @@ DATABASE_URL = os.getenv(
 is_sqlite = DATABASE_URL.startswith("sqlite")
 
 engine_kwargs = {"echo": False}
-if not is_sqlite:
+if is_sqlite:
+    from sqlalchemy import event
+    # Enforce SQLite foreign key constraints at connection level
+    def _set_sqlite_pragma(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+else:
     engine_kwargs.update({
         "pool_size": 20,
         "max_overflow": 10,
@@ -20,6 +27,10 @@ if not is_sqlite:
     })
 
 engine = create_async_engine(DATABASE_URL, **engine_kwargs)
+
+if is_sqlite:
+    from sqlalchemy import event
+    event.listen(engine.sync_engine, "connect", _set_sqlite_pragma)
 AsyncSessionLocal = async_sessionmaker(
     bind=engine,
     class_=AsyncSession,

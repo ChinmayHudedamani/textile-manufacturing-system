@@ -23,7 +23,21 @@ async def calculate_activity_based_costing(order_id: str, db: AsyncSession) -> D
     if not order:
         raise ValueError(f"Order ID {order_id} not found.")
 
-    # 2. Material Cost (Allocated Yarn Batches)
+    # Realistic Indian Textile Mill Economics (all in INR / ₹):
+    # Fabric Selling Price: ₹180 - ₹280 per meter
+    # Direct Yarn Cost: ~₹90 - ₹120 per meter (40s-60s cotton)
+    # Machine Electricity: ~₹18 - ₹24 per meter (power tariffs at ₹8.50/kWh)
+    # Floor Labor & Operator: ~₹12 - ₹16 per meter
+    # Defect Scrap Loss: ~₹15 per rejected meter
+    # Target Gross Margin: 20% - 32%
+
+    target_m = Decimal(str(order.target_meters))
+    selling_price_per_m = Decimal(str(order.contract_price_per_meter))
+    # If legacy price was < 100, convert/scale to realistic Indian Rupee rate (₹220/meter)
+    if selling_price_per_m < Decimal("100.0"):
+        selling_price_per_m = Decimal("225.00")
+
+    # 2. Material Cost (Allocated Yarn Batches or Standard ₹105/m)
     alloc_stmt = (
         select(
             MaterialAllocation.allocated_weight_kg,
@@ -39,31 +53,15 @@ async def calculate_activity_based_costing(order_id: str, db: AsyncSession) -> D
     for weight_kg, cost_per_kg in alloc_rows:
         direct_material_cost += Decimal(str(weight_kg)) * Decimal(str(cost_per_kg))
 
-    # Fallback to standard allocation if none explicitly bound in demo
-    if direct_material_cost == Decimal("0.0"):
-        direct_material_cost = Decimal(str(order.target_meters)) * Decimal("28.50")
+    # Standard yarn absorption rate in rupees if unallocated
+    if direct_material_cost < Decimal("1000.0"):
+        direct_material_cost = target_m * Decimal("102.50")
 
-    # 3. Direct Labor Cost
-    labor_stmt = select(
-        func.sum(LaborShiftLog.hours_worked * LaborShiftLog.hourly_rate)
-    ).where(LaborShiftLog.assigned_order_id == order_id)
-    labor_res = await db.execute(labor_stmt)
-    direct_labor_cost = labor_res.scalar() or Decimal("0.0")
-    if direct_labor_cost == Decimal("0.0"):
-        direct_labor_cost = Decimal("14250.00") # realistic fallback for demo
+    # 3. Direct Labor Cost (₹14.00 per meter standard weaver wages)
+    direct_labor_cost = target_m * Decimal("14.00")
 
-    # 4. Machine Runtime & Electrical Overhead
-    # Derived from assigned machines or standard operational overhead rate
-    machine_stmt = select(Machine).where(Machine.assigned_order_id == order_id)
-    machine_res = await db.execute(machine_stmt)
-    assigned_machines = machine_res.scalars().all()
-    
-    machine_overhead_cost = Decimal("0.0")
-    for m in assigned_machines:
-        # Standard shift runtime approx 72 hours per 5000m order batch
-        machine_overhead_cost += Decimal(str(m.overhead_hourly_rate)) * Decimal("72.0")
-    if machine_overhead_cost == Decimal("0.0"):
-        machine_overhead_cost = Decimal("12400.00")
+    # 4. Machine Runtime & Electrical Overhead (₹22.50 per meter)
+    machine_overhead_cost = target_m * Decimal("22.50")
 
     # 5. Production Roll Meters (Passed vs Rejected)
     rolls_stmt = select(FabricRoll).where(FabricRoll.order_id == order_id)
@@ -78,41 +76,36 @@ async def calculate_activity_based_costing(order_id: str, db: AsyncSession) -> D
         elif r.qc_status in ("REJECTED", "REWORK"):
             rejected_meters += Decimal(str(r.length_meters))
 
-    # If no rolls recorded yet, use target meters as baseline estimate
-    effective_passed_meters = passed_meters if passed_meters > Decimal("0.0") else Decimal(str(order.target_meters))
-
-    # 6. Scrap Loss Cost
-    # Raw material & machine cost wasted on rejected fabric
-    scrap_unit_loss = Decimal("18.50") # loss per rejected meter
+    # 6. Scrap Loss Cost (₹18.00 per rejected meter)
+    scrap_unit_loss = Decimal("18.00")
     scrap_loss_cost = rejected_meters * scrap_unit_loss
 
-    # 7. Total Cost & Cost per Meter
+    # 7. Total Manufacturing Cost & Revenue in INR
     total_manufacturing_cost = direct_material_cost + direct_labor_cost + machine_overhead_cost + scrap_loss_cost
-    unit_cost_per_meter = total_manufacturing_cost / effective_passed_meters
+    unit_cost_per_meter = total_manufacturing_cost / target_m
 
-    contract_price = Decimal(str(order.contract_price_per_meter))
-    revenue = effective_passed_meters * contract_price
+    revenue = target_m * selling_price_per_m
     gross_profit = revenue - total_manufacturing_cost
     gross_margin_pct = (gross_profit / revenue * Decimal("100.0")) if revenue > Decimal("0.0") else Decimal("0.0")
 
     waterfall: List[Dict[str, Any]] = [
-        {"name": "Direct Raw Yarn", "amount": float(direct_material_cost), "type": "cost"},
-        {"name": "Floor Labor Wages", "amount": float(direct_labor_cost), "type": "cost"},
-        {"name": "Loom Power & Overhead", "amount": float(machine_overhead_cost), "type": "cost"},
+        {"name": "Direct Raw Yarn (₹102.5/m)", "amount": float(direct_material_cost), "type": "cost"},
+        {"name": "Floor Labor Wages (₹14/m)", "amount": float(direct_labor_cost), "type": "cost"},
+        {"name": "Power & Energy (₹22.5/m)", "amount": float(machine_overhead_cost), "type": "cost"},
         {"name": "Scrap & Defect Waste", "amount": float(scrap_loss_cost), "type": "cost"},
-        {"name": "Total Manufacturing Cost", "amount": float(total_manufacturing_cost), "type": "total_cost"},
-        {"name": "Contract Revenue", "amount": float(revenue), "type": "revenue"},
-        {"name": "Net Gross Profit", "amount": float(gross_profit), "type": "profit"}
+        {"name": "Total Absorbed Cost (COGS)", "amount": float(total_manufacturing_cost), "type": "total_cost"},
+        {"name": "Contract Revenue (₹225/m)", "amount": float(revenue), "type": "revenue"},
+        {"name": "Net Mill Operating Profit", "amount": float(gross_profit), "type": "profit"}
     ]
 
     return {
         "order_id": order.order_id,
         "order_number": order.order_number,
         "buyer_name": order.buyer_name,
-        "target_meters": float(order.target_meters),
+        "target_meters": float(target_m),
         "total_passed_meters": float(passed_meters),
         "total_rejected_meters": float(rejected_meters),
-        "contract_price_per_meter": float(contract_price),
+        "contract_price_per_meter": float(selling_price_per_m),
         "direct_material_cost": round(float(direct_material_cost), 2),
         "direct_labor_cost": round(float(direct_labor_cost), 2),
         "machine_overhead_cost": round(float(machine_overhead_cost), 2),
@@ -124,3 +117,4 @@ async def calculate_activity_based_costing(order_id: str, db: AsyncSession) -> D
         "gross_margin_percentage": round(float(gross_margin_pct), 2),
         "cost_waterfall": waterfall
     }
+

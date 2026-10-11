@@ -135,34 +135,60 @@ async def seed_initial_mill_data(db: AsyncSession):
 
     # 4. Machines
     machines = [
-        # Spinning Stage
+        # Spinning Stage (4 Frames)
         Machine(
             machine_id="SPIN-FRAME-01",
             stage="SPINNING",
-            rated_capacity_rpm=12000,
+            rated_capacity_rpm=14800,
             current_status="RUNNING",
             assigned_order_id="ord-zara-081",
             overhead_hourly_rate=Decimal("38.00"),
             current_picks_cumulative=524800,
-            current_power_draw_amps=Decimal("24.5"),
-            current_rpm=11800,
+            current_power_draw_amps=Decimal("18.4"),
+            current_rpm=14800,
             idle_seconds=0,
             last_heartbeat=datetime.utcnow()
         ),
         Machine(
             machine_id="SPIN-FRAME-02",
             stage="SPINNING",
-            rated_capacity_rpm=12000,
+            rated_capacity_rpm=14800,
+            current_status="RUNNING",
+            assigned_order_id="ord-ms-094",
+            overhead_hourly_rate=Decimal("38.00"),
+            current_picks_cumulative=310200,
+            current_power_draw_amps=Decimal("17.9"),
+            current_rpm=14650,
+            idle_seconds=0,
+            last_heartbeat=datetime.utcnow()
+        ),
+        Machine(
+            machine_id="SPIN-FRAME-03",
+            stage="SPINNING",
+            rated_capacity_rpm=14800,
+            current_status="RUNNING",
+            assigned_order_id="ord-arvind-102",
+            overhead_hourly_rate=Decimal("38.00"),
+            current_picks_cumulative=412000,
+            current_power_draw_amps=Decimal("18.2"),
+            current_rpm=14720,
+            idle_seconds=0,
+            last_heartbeat=datetime.utcnow()
+        ),
+        Machine(
+            machine_id="SPIN-FRAME-04",
+            stage="SPINNING",
+            rated_capacity_rpm=14800,
             current_status="IDLE",
             assigned_order_id=None,
             overhead_hourly_rate=Decimal("38.00"),
-            current_picks_cumulative=310200,
+            current_picks_cumulative=198400,
             current_power_draw_amps=Decimal("1.8"),
             current_rpm=0,
             idle_seconds=185, # > 120s: TRIGGERS AMBER WARNING
             last_heartbeat=datetime.utcnow() - timedelta(seconds=185)
         ),
-        # Weaving Stage (Airjet Looms)
+        # Weaving Stage (6 Airjet Looms)
         Machine(
             machine_id="WEAVE-LOOM-01",
             stage="WEAVING",
@@ -193,14 +219,14 @@ async def seed_initial_mill_data(db: AsyncSession):
             machine_id="WEAVE-LOOM-03",
             stage="WEAVING",
             rated_capacity_rpm=750,
-            current_status="MAINTENANCE",
-            assigned_order_id=None,
+            current_status="RUNNING",
+            assigned_order_id="ord-arvind-102",
             overhead_hourly_rate=Decimal("45.00"),
-            current_picks_cumulative=98000,
-            current_power_draw_amps=Decimal("0.0"),
-            current_rpm=0,
-            idle_seconds=4200,
-            last_heartbeat=datetime.utcnow() - timedelta(minutes=70)
+            current_picks_cumulative=172000,
+            current_power_draw_amps=Decimal("15.5"),
+            current_rpm=725,
+            idle_seconds=0,
+            last_heartbeat=datetime.utcnow()
         ),
         Machine(
             machine_id="WEAVE-LOOM-04", # THE BENCHMARK SPEC MACHINE
@@ -210,12 +236,38 @@ async def seed_initial_mill_data(db: AsyncSession):
             assigned_order_id="ord-zara-081",
             overhead_hourly_rate=Decimal("45.00"),
             current_picks_cumulative=105412,
-            current_power_draw_amps=Decimal("15.4"),
-            current_rpm=740,
+            current_power_draw_amps=Decimal("14.8"),
+            current_rpm=720,
             idle_seconds=0,
             last_heartbeat=datetime.utcnow()
         ),
-        # Dyeing Vats
+        Machine(
+            machine_id="WEAVE-LOOM-05",
+            stage="WEAVING",
+            rated_capacity_rpm=750,
+            current_status="RUNNING",
+            assigned_order_id="ord-zara-081",
+            overhead_hourly_rate=Decimal("45.00"),
+            current_picks_cumulative=210500,
+            current_power_draw_amps=Decimal("15.6"),
+            current_rpm=730,
+            idle_seconds=0,
+            last_heartbeat=datetime.utcnow()
+        ),
+        Machine(
+            machine_id="WEAVE-LOOM-06",
+            stage="WEAVING",
+            rated_capacity_rpm=750,
+            current_status="RUNNING",
+            assigned_order_id="ord-ms-094",
+            overhead_hourly_rate=Decimal("45.00"),
+            current_picks_cumulative=195200,
+            current_power_draw_amps=Decimal("16.0"),
+            current_rpm=728,
+            idle_seconds=0,
+            last_heartbeat=datetime.utcnow()
+        ),
+        # Dyeing Vats (3 Vats)
         Machine(
             machine_id="DYE-VAT-01",
             stage="DYEING",
@@ -233,13 +285,26 @@ async def seed_initial_mill_data(db: AsyncSession):
             machine_id="DYE-VAT-02",
             stage="DYEING",
             rated_capacity_rpm=120,
-            current_status="IDLE",
-            assigned_order_id=None,
+            current_status="RUNNING",
+            assigned_order_id="ord-zara-081",
             overhead_hourly_rate=Decimal("55.00"),
-            current_picks_cumulative=12000,
-            current_power_draw_amps=Decimal("2.1"),
-            current_rpm=0,
-            idle_seconds=45,
+            current_picks_cumulative=38100,
+            current_power_draw_amps=Decimal("26.4"),
+            current_rpm=110,
+            idle_seconds=0,
+            last_heartbeat=datetime.utcnow()
+        ),
+        Machine(
+            machine_id="DYE-VAT-03",
+            stage="DYEING",
+            rated_capacity_rpm=120,
+            current_status="RUNNING",
+            assigned_order_id="ord-arvind-102",
+            overhead_hourly_rate=Decimal("55.00"),
+            current_picks_cumulative=29400,
+            current_power_draw_amps=Decimal("14.2"),
+            current_rpm=80,
+            idle_seconds=0,
             last_heartbeat=datetime.utcnow()
         )
     ]
