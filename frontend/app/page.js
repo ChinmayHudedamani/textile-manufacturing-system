@@ -21,6 +21,56 @@ const EQUIPMENT_META = {
   "DYE-VAT-03": { model: "Thies Eco-Bloc High Temp Jigger", dept: "Dyeing & Finishing", operator: "Vikas Pawar (Shift A)", outputMetric: "dyed meters" },
 };
 
+// Enterprise Role Configuration & Tab Access Policies (Zero if-else sprawl)
+const ROLE_CONFIG = {
+  admin: {
+    title: "System Admin",
+    badgeColor: "#818cf8",
+    gradient: "linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(79, 70, 229, 0.3))",
+    icon: "🛡️",
+    defaultTab: "machines",
+    allowedTabs: ["yarn", "machines", "quality", "dispatch", "orders", "finance"],
+    description: "Full factory orchestration: Raw yarn, looms, ASTM QC, dispatch dock, and P&L books."
+  },
+  owner: {
+    title: "Mill Owner",
+    badgeColor: "#eab308",
+    gradient: "linear-gradient(135deg, rgba(234, 179, 8, 0.25), rgba(202, 138, 4, 0.3))",
+    icon: "👑",
+    defaultTab: "finance",
+    allowedTabs: ["finance", "orders"],
+    description: "Focus on ₹ Unit Economics, P&L margins, daily electricity burn, and gross profit."
+  },
+  floor_supervisor: {
+    title: "Floor Supervisor",
+    badgeColor: "#10b981",
+    gradient: "linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(5, 150, 105, 0.3))",
+    icon: "⚡",
+    defaultTab: "machines",
+    allowedTabs: ["yarn", "machines", "quality", "dispatch"],
+    description: "Machine RPM & Picks telemetry, live breakdowns, and ASTM 4-point QC inspection."
+  },
+  customer: {
+    title: "Customer / Buyer",
+    badgeColor: "#38bdf8",
+    gradient: "linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(14, 165, 233, 0.3))",
+    icon: "🛍️",
+    defaultTab: "orders",
+    allowedTabs: ["orders"],
+    description: "Zero phone calls: Live interactive order pipeline stepper, passed QC meters, and dispatch tracking."
+  }
+};
+
+// ASTM D5430 Defect Rules Table (Eliminating if-else chains)
+const ASTM_DEFECT_RULES = {
+  NONE: { points: 0, verdict: "PASSED", label: "None / Surface Clean (0 pts • Grade A)" },
+  SLUB: { points: 4, verdict: "PASSED", label: "Slub & Fly Yarn (+4 pts • Grade A)" },
+  UNEVEN_WEAVING: { points: 12, verdict: "PASSED", label: "Uneven Reed / Weft (+12 pts • Grade A)" },
+  COLOR_MISMATCH: { points: 18, verdict: "REWORK", label: "Color Shade Mismatch (+18 pts • Rework)" },
+  OIL_STAIN: { points: 22, verdict: "REWORK", label: "Loom Oil Stain (+22 pts • Rework)" },
+  HOLE: { points: 35, verdict: "REJECTED", label: "Holes / Broken Warp (+35 pts • Scrap Reject)" }
+};
+
 export default function EverestTextileERP() {
   const [activeTab, setActiveTab] = useState("machines");
   const [currentTime, setCurrentTime] = useState("");
@@ -728,11 +778,8 @@ GROUP BY o.order_id;`,
           <button
             onClick={() => setRoleModalOpen(true)}
             style={{
-              background: currentRole === "owner" ? "linear-gradient(135deg, rgba(234, 179, 8, 0.25), rgba(202, 138, 4, 0.3))" :
-                          currentRole === "customer" ? "linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(14, 165, 233, 0.3))" :
-                          currentRole === "floor_supervisor" ? "linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(5, 150, 105, 0.3))" :
-                          "linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(79, 70, 229, 0.3))",
-              border: `1px solid ${currentRole === "owner" ? "#eab308" : currentRole === "customer" ? "#38bdf8" : currentRole === "floor_supervisor" ? "#10b981" : "#818cf8"}`,
+              background: (ROLE_CONFIG[currentRole] || ROLE_CONFIG.admin).gradient,
+              border: `1px solid ${(ROLE_CONFIG[currentRole] || ROLE_CONFIG.admin).badgeColor}`,
               color: "#fff",
               padding: "6px 14px",
               borderRadius: "9999px",
@@ -745,8 +792,8 @@ GROUP BY o.order_id;`,
               boxShadow: "0 2px 10px rgba(0,0,0,0.3)"
             }}
           >
-            <span>👤</span>
-            <span>Role: {currentRole === "owner" ? "Mill Owner" : currentRole === "customer" ? "Customer / Buyer" : currentRole === "floor_supervisor" ? "Floor Supervisor" : "System Admin"}</span>
+            <span>{(ROLE_CONFIG[currentRole] || ROLE_CONFIG.admin).icon}</span>
+            <span>Role: {(ROLE_CONFIG[currentRole] || ROLE_CONFIG.admin).title}</span>
             <span style={{ fontSize: "0.68rem", opacity: 0.8 }}>▼</span>
           </button>
 
@@ -803,113 +850,41 @@ GROUP BY o.order_id;`,
 
             <div style={{ padding: "20px 24px" }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "20px" }}>
-              {/* Option 1: Mill Owner */}
-              <div
-                style={{
-                  background: currentRole === "owner" ? "rgba(234, 179, 8, 0.15)" : "rgba(15, 23, 42, 0.6)",
-                  border: `1.5px solid ${currentRole === "owner" ? "#eab308" : "rgba(255,255,255,0.08)"}`,
-                  borderRadius: "12px",
-                  padding: "16px",
-                  cursor: "pointer",
-                  transition: "all 0.2s ease"
-                }}
-                onClick={() => {
-                  setCurrentRole("owner");
-                  setActiveTab("finance");
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
-                  <span style={{ fontSize: "1.4rem" }}>👑</span>
-                  <div>
-                    <div style={{ fontWeight: 800, color: "#eab308", fontSize: "0.95rem" }}>Mill Owner</div>
-                    <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Executive Financial View</div>
-                  </div>
-                </div>
-                <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", lineHeight: 1.3 }}>
-                  Focus on ₹ Unit Economics, P&amp;L margins, daily electricity burn, and overall delivery revenue.
-                </p>
+                {Object.entries(ROLE_CONFIG).map(([roleKey, conf]) => {
+                  const isSelected = currentRole === roleKey;
+                  return (
+                    <div
+                      key={roleKey}
+                      style={{
+                        background: isSelected ? conf.gradient : "rgba(15, 23, 42, 0.6)",
+                        border: `1.5px solid ${isSelected ? conf.badgeColor : "rgba(255,255,255,0.08)"}`,
+                        borderRadius: "12px",
+                        padding: "16px",
+                        cursor: "pointer",
+                        transition: "all 0.2s ease",
+                        boxShadow: isSelected ? `0 6px 20px ${conf.badgeColor}33` : "none"
+                      }}
+                      onClick={() => {
+                        setCurrentRole(roleKey);
+                        setActiveTab(conf.defaultTab);
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+                        <span style={{ fontSize: "1.4rem" }}>{conf.icon}</span>
+                        <div>
+                          <div style={{ fontWeight: 800, color: conf.badgeColor, fontSize: "0.95rem" }}>{conf.title}</div>
+                          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                            {conf.allowedTabs.length} Modules Available
+                          </div>
+                        </div>
+                      </div>
+                      <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", lineHeight: 1.3, margin: 0 }}>
+                        {conf.description}
+                      </p>
+                    </div>
+                  );
+                })}
               </div>
-
-              {/* Option 2: Customer / Buyer */}
-              <div
-                style={{
-                  background: currentRole === "customer" ? "rgba(56, 189, 248, 0.15)" : "rgba(15, 23, 42, 0.6)",
-                  border: `1.5px solid ${currentRole === "customer" ? "#38bdf8" : "rgba(255,255,255,0.08)"}`,
-                  borderRadius: "12px",
-                  padding: "16px",
-                  cursor: "pointer",
-                  transition: "all 0.2s ease"
-                }}
-                onClick={() => {
-                  setCurrentRole("customer");
-                  setActiveTab("orders");
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
-                  <span style={{ fontSize: "1.4rem" }}>🛍️</span>
-                  <div>
-                    <div style={{ fontWeight: 800, color: "#38bdf8", fontSize: "0.95rem" }}>Customer / Buyer</div>
-                    <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Self-Service Tracking Portal</div>
-                  </div>
-                </div>
-                <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", lineHeight: 1.3 }}>
-                  Zero phone calls. Live interactive order pipeline stepper, passed QC meters, and dispatch tracking.
-                </p>
-              </div>
-
-              {/* Option 3: Floor Supervisor */}
-              <div
-                style={{
-                  background: currentRole === "floor_supervisor" ? "rgba(16, 185, 129, 0.15)" : "rgba(15, 23, 42, 0.6)",
-                  border: `1.5px solid ${currentRole === "floor_supervisor" ? "#10b981" : "rgba(255,255,255,0.08)"}`,
-                  borderRadius: "12px",
-                  padding: "16px",
-                  cursor: "pointer",
-                  transition: "all 0.2s ease"
-                }}
-                onClick={() => {
-                  setCurrentRole("floor_supervisor");
-                  setActiveTab("machines");
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
-                  <span style={{ fontSize: "1.4rem" }}>⚡</span>
-                  <div>
-                    <div style={{ fontWeight: 800, color: "#34d399", fontSize: "0.95rem" }}>Floor Supervisor</div>
-                    <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Shopfloor Telemetry &amp; Looms</div>
-                  </div>
-                </div>
-                <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", lineHeight: 1.3 }}>
-                  Machine RPM &amp; Picks telemetry, live breakdowns/maintenance, ASTM 4-point QC bench inspection.
-                </p>
-              </div>
-
-              {/* Option 4: System Admin */}
-              <div
-                style={{
-                  background: currentRole === "admin" ? "rgba(99, 102, 241, 0.15)" : "rgba(15, 23, 42, 0.6)",
-                  border: `1.5px solid ${currentRole === "admin" ? "#818cf8" : "rgba(255,255,255,0.08)"}`,
-                  borderRadius: "12px",
-                  padding: "16px",
-                  cursor: "pointer",
-                  transition: "all 0.2s ease"
-                }}
-                onClick={() => {
-                  setCurrentRole("admin");
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
-                  <span style={{ fontSize: "1.4rem" }}>🛡️</span>
-                  <div>
-                    <div style={{ fontWeight: 800, color: "#a5b4fc", fontSize: "0.95rem" }}>System Admin</div>
-                    <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Full Factory Orchestration</div>
-                  </div>
-                </div>
-                <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", lineHeight: 1.3 }}>
-                  Full unified privileges: Raw yarn inward, fleet truck consolidation, QC locks, and P&amp;L books.
-                </p>
-              </div>
-            </div>
 
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
               <button
@@ -925,9 +900,9 @@ GROUP BY o.order_id;`,
         </div>
       )}
 
-      {/* Glass Navigation Tabs Bar */}
+      {/* Glass Navigation Tabs Bar (Strictly Rendered from Encapsulated Role Definition) */}
       <nav className="glass-tabs-nav">
-        {(currentRole === "admin" || currentRole === "floor_supervisor") && (
+        {ROLE_CONFIG[currentRole]?.allowedTabs.includes("yarn") && (
           <button
             className={`glass-tab-btn ${activeTab === "yarn" ? "active" : ""}`}
             onClick={() => {
@@ -940,7 +915,7 @@ GROUP BY o.order_id;`,
           </button>
         )}
 
-        {(currentRole === "admin" || currentRole === "floor_supervisor") && (
+        {ROLE_CONFIG[currentRole]?.allowedTabs.includes("machines") && (
           <button
             className={`glass-tab-btn ${activeTab === "machines" ? "active" : ""}`}
             onClick={() => {
@@ -953,7 +928,7 @@ GROUP BY o.order_id;`,
           </button>
         )}
 
-        {(currentRole === "admin" || currentRole === "floor_supervisor") && (
+        {ROLE_CONFIG[currentRole]?.allowedTabs.includes("quality") && (
           <button
             className={`glass-tab-btn ${activeTab === "quality" ? "active" : ""}`}
             onClick={() => {
@@ -966,7 +941,7 @@ GROUP BY o.order_id;`,
           </button>
         )}
 
-        {(currentRole === "admin" || currentRole === "floor_supervisor") && (
+        {ROLE_CONFIG[currentRole]?.allowedTabs.includes("dispatch") && (
           <button
             className={`glass-tab-btn ${activeTab === "dispatch" ? "active" : ""}`}
             onClick={() => {
@@ -980,7 +955,7 @@ GROUP BY o.order_id;`,
           </button>
         )}
 
-        {(currentRole === "admin" || currentRole === "customer") && (
+        {ROLE_CONFIG[currentRole]?.allowedTabs.includes("orders") && (
           <button
             className={`glass-tab-btn ${activeTab === "orders" ? "active" : ""}`}
             onClick={() => {
@@ -993,7 +968,7 @@ GROUP BY o.order_id;`,
           </button>
         )}
 
-        {(currentRole === "admin" || currentRole === "owner") && (
+        {ROLE_CONFIG[currentRole]?.allowedTabs.includes("finance") && (
           <button
             className={`glass-tab-btn ${activeTab === "finance" ? "active" : ""}`}
             onClick={() => {
@@ -1724,42 +1699,18 @@ GROUP BY o.order_id;`,
                           value={inspectForm.defect_type}
                           onChange={(e) => {
                             const dt = e.target.value;
-                            // Automatic ASTM Penalty Point Assignment based on textile standards
-                            let pts = 0;
-                            let v = "PASSED";
-                            if (dt === "NONE") {
-                              pts = 0;
-                              v = "PASSED";
-                            } else if (dt === "SLUB") {
-                              pts = 4;
-                              v = "PASSED"; // Grade A (<=15 pts/100m)
-                            } else if (dt === "UNEVEN_WEAVING") {
-                              pts = 12;
-                              v = "PASSED"; // Grade A
-                            } else if (dt === "COLOR_MISMATCH") {
-                              pts = 18;
-                              v = "REWORK"; // Grade B (16-25 pts/100m) -> secondary dye lot rework
-                            } else if (dt === "OIL_STAIN") {
-                              pts = 22;
-                              v = "REWORK"; // Grade B -> scouring wash
-                            } else if (dt === "HOLE") {
-                              pts = 35;
-                              v = "REJECTED"; // Grade C/Reject (>25 pts/100m) -> Zero Dispatch Lock
-                            }
+                            const rule = ASTM_DEFECT_RULES[dt] || ASTM_DEFECT_RULES.NONE;
                             setInspectForm({
                               ...inspectForm,
                               defect_type: dt,
-                              defect_points: pts,
-                              verdict: v,
+                              defect_points: rule.points,
+                              verdict: rule.verdict,
                             });
                           }}
                         >
-                          <option value="NONE">None / Surface Clean (0 pts • Grade A)</option>
-                          <option value="SLUB">Slub &amp; Fly Yarn (+4 pts • Grade A)</option>
-                          <option value="UNEVEN_WEAVING">Uneven Reed / Weft (+12 pts • Grade A)</option>
-                          <option value="COLOR_MISMATCH">Color Shade Mismatch (+18 pts • Rework)</option>
-                          <option value="OIL_STAIN">Loom Oil Stain (+22 pts • Rework)</option>
-                          <option value="HOLE">Holes / Broken Warp (+35 pts • Scrap Reject)</option>
+                          {Object.entries(ASTM_DEFECT_RULES).map(([key, rule]) => (
+                            <option key={key} value={key}>{rule.label}</option>
+                          ))}
                         </select>
                       </div>
                       <div className="form-field">

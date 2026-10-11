@@ -13,7 +13,7 @@ import os
 from datetime import datetime
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -58,6 +58,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from backend.app.auth import (
+    RoleRegistry,
+    UserProfileDTO,
+    get_current_user_role,
+    BaseRole,
+    UserRoleEnum
+)
+
 # 0. Health Liveness Probe
 @app.get("/api/v1/health", tags=["System Health"])
 async def health_check():
@@ -69,6 +77,31 @@ async def health_check():
         "version": "2.1.0",
         "architecture": "Clean Modular Router-Controller Engine"
     }
+
+
+# 0b. Strict Role Authentication & Profile Verification Endpoint
+@app.get("/api/v1/auth/profile", response_model=UserProfileDTO, tags=["Authentication & RBAC"])
+async def get_user_profile(user_role: BaseRole = Depends(get_current_user_role)):
+    """Validates X-User-Role header and returns strict RBAC permissions & routes using OOP encapsulation."""
+    return UserProfileDTO(
+        role=user_role.role_name.value,
+        display_title=user_role.display_title,
+        allowed_routes=user_role.get_allowed_routes(),
+        permissions=[p.value for p in user_role._permissions]
+    )
+
+
+@app.get("/api/v1/auth/roles", tags=["Authentication & RBAC"])
+async def list_available_system_roles():
+    """Returns available enterprise roles with their polymorphic permissions."""
+    return [
+        {
+            "role": role_key,
+            "display_title": role_obj.display_title,
+            "allowed_routes": role_obj.get_allowed_routes()
+        }
+        for role_key, role_obj in RoleRegistry._REGISTRY.items()
+    ]
 
 # 1-6. Register Domain Feature Routers
 app.include_router(inventory_router)
